@@ -16,3 +16,9 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
   .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(CodeCoverageSettings.settings: _*)
+  .settings(inThisBuild(buildSettings))
+
+// Settings for the whole build
+lazy val buildSettings = Def.settings(
+  scalafmtOnCompile := true
+)
