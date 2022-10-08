@@ -1,0 +1,87 @@
+package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+
+import play.api.Logging
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax.unlift
+import play.api.libs.json.OWrites
+import play.api.libs.json.Reads
+import play.api.libs.json.__
+import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
+
+object PresentationError extends CommonFormats with Logging {
+
+  val MessageFieldName = "message"
+  val CodeFieldName    = "code"
+
+  def forbiddenError(message: String): PresentationError =
+    StandardError(message, ErrorCode.Forbidden)
+
+  def badRequestError(message: String): PresentationError = {
+    logger.warn(s"Unable to parse the XML: $message")
+    StandardError(message, ErrorCode.BadRequest)
+  }
+
+  def notFoundError(message: String): PresentationError =
+    StandardError(message, ErrorCode.NotFound)
+
+  def upstreamServiceError(
+    message: String = "Internal server error",
+    code: ErrorCode = ErrorCode.InternalServerError,
+    cause: UpstreamErrorResponse
+  ): PresentationError =
+    UpstreamServiceError(message, code, cause)
+
+  def internalServiceError(
+    message: String = "Internal server error",
+    code: ErrorCode = ErrorCode.InternalServerError,
+    cause: Option[Throwable] = None
+  ): PresentationError =
+    InternalServiceError(message, code, cause)
+
+  def unapply(error: PresentationError): Option[(String, ErrorCode)] = Some((error.message, error.code))
+
+  implicit val baseErrorWrites: OWrites[PresentationError] =
+    (
+      (__ \ MessageFieldName).write[String] and
+        (__ \ CodeFieldName).write[ErrorCode]
+    )(unlift(PresentationError.unapply))
+
+  implicit val standardErrorReads: Reads[StandardError] =
+    (
+      (__ \ MessageFieldName).read[String] and
+        (__ \ CodeFieldName).read[ErrorCode]
+    )(StandardError.apply _)
+
+}
+
+sealed abstract class PresentationError extends Product with Serializable {
+  def message: String
+  def code: ErrorCode
+}
+
+case class StandardError(message: String, code: ErrorCode) extends PresentationError
+
+case class UpstreamServiceError(
+  message: String = "Internal server error",
+  code: ErrorCode = ErrorCode.InternalServerError,
+  cause: UpstreamErrorResponse
+) extends PresentationError
+
+object UpstreamServiceError {
+
+  def causedBy(cause: UpstreamErrorResponse): PresentationError =
+    PresentationError.upstreamServiceError(cause = cause)
+}
+
+case class InternalServiceError(
+  message: String = "Internal server error",
+  code: ErrorCode = ErrorCode.InternalServerError,
+  cause: Option[Throwable] = None
+) extends PresentationError
+
+object InternalServiceError {
+
+  def causedBy(cause: Throwable): PresentationError =
+    PresentationError.internalServiceError(cause = Some(cause))
+}
