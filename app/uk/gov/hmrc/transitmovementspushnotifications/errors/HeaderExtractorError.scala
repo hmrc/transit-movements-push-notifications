@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.errors
 
-import play.api.libs.json.Json
+sealed abstract class HeaderExtractError
 
-case class BoxId(value: String) extends AnyVal
-
-object BoxId {
-  implicit val boxIdFormats = Json.format[BoxId]
+object HeaderExtractError {
+  case class NoHeaderFound(element: String)      extends HeaderExtractError
+  case class InvalidMessageType(element: String) extends HeaderExtractError
 }

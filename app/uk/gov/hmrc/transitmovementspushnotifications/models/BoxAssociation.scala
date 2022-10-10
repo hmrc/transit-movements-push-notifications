@@ -16,10 +16,6 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.models
 
-import play.api.libs.json.Json
+import java.time.OffsetDateTime
 
-case class BoxId(value: String) extends AnyVal
-
-object BoxId {
-  implicit val boxIdFormats = Json.format[BoxId]
-}
+case class BoxAssociation(boxId: BoxId, movementId: MovementId, updated: OffsetDateTime)
