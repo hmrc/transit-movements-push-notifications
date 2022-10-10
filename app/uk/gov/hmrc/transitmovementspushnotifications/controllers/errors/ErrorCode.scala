@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.errors
+package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import play.api.http.Status.BAD_REQUEST
 import play.api.http.Status.FORBIDDEN

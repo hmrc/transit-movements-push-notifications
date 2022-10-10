@@ -34,7 +34,7 @@ trait PushPullNotificationService {
 
   def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
-  def checkBoxIdExists(boxId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
+  def checkBoxIdExists(boxId: BoxId)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 }
 
 @Singleton
@@ -53,7 +53,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
 
-  override def checkBoxIdExists(boxId: String)(implicit
+  override def checkBoxIdExists(boxId: BoxId)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): EitherT[Future, PushPullNotificationError, BoxId] =
@@ -61,7 +61,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
       pushPullNotificationConnector.getAllBoxes
         .map {
           boxList =>
-            if (boxList.exists(_.boxId.value == boxId)) Right(BoxId(boxId))
+            if (boxList.exists(_.boxId == boxId)) Right(boxId)
             else Left(PushPullNotificationError.InvalidBoxId(s"Box id provided does not exist: $boxId"))
         }
         .recover {

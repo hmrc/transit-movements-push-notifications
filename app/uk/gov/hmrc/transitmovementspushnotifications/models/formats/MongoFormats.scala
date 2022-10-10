@@ -46,7 +46,7 @@ trait MongoFormats extends CommonFormats with MongoBinaryFormats.Implicits with 
   implicit val offsetDateTimeFormat: Format[OffsetDateTime] = Format.apply(offsetDateTimeReads, offsetDateTimeWrites)
 
   // these use the dates above, so need to be here for compile-time macro expansion
-  implicit val movementBoxAssociationFormat: Format[BoxAssociation] = Json.format[BoxAssociation]
+  implicit val boxAssociationFormat: Format[BoxAssociation] = Json.format[BoxAssociation]
 
 }
 

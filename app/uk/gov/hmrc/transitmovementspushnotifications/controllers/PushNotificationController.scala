@@ -14,31 +14,26 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications
+package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
 import cats.data.EitherT
-import play.api.libs.json.JsError
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
-import play.api.mvc.Headers
 import play.api.mvc.Result
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
-import uk.gov.hmrc.transitmovementspushnotifications.errors.ConvertError
-import uk.gov.hmrc.transitmovementspushnotifications.errors.PresentationError
-import uk.gov.hmrc.transitmovementspushnotifications.models.Box
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
+import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.MovementBoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.MovementBoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -46,7 +41,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @Singleton()
-class BoxAssociationController @Inject() (
+class PushNotificationController @Inject() (
   cc: ControllerComponents,
   pushPullNotificationService: PushPullNotificationService,
   movementBoxAssociationRepository: MovementBoxAssociationRepository,
@@ -54,7 +49,6 @@ class BoxAssociationController @Inject() (
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc)
-    with HeaderValueExtractor
     with ConvertError {
 
   def createBoxAssociation(movementId: MovementId): Action[AnyContent] = Action.async {
@@ -72,7 +66,7 @@ class BoxAssociationController @Inject() (
   private def getBoxId(requestBodyOpt: Option[JsValue])(implicit hc: HeaderCarrier): EitherT[Future, PresentationError, BoxId] =
     requestBodyOpt
       .map {
-        _.validate[Box] match {
+        _.validate[BoxAssociationRequest] match {
           case JsSuccess(box, _) =>
             if (box.boxId.isDefined) pushPullNotificationService.checkBoxIdExists(box.boxId.get).asPresentation
             else pushPullNotificationService.getDefaultBoxId(box.clientId).asPresentation

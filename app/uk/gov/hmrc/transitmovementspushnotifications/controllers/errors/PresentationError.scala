@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.errors
+package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import play.api.Logging
 import play.api.libs.functional.syntax.toFunctionalBuilderOps

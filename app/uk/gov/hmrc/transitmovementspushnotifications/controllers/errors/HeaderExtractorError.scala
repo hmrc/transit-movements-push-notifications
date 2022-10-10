@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.errors
+package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 sealed abstract class HeaderExtractError
 

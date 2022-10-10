@@ -14,6 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.models.request
 
-case class BoxId(value: String) extends AnyVal
+import play.api.libs.json.Json
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+
+case class BoxAssociationRequest(clientId: String, boxId: Option[BoxId])
+
+object BoxAssociationRequest {
+  implicit val boxFormat = Json.format[BoxAssociationRequest]
+}

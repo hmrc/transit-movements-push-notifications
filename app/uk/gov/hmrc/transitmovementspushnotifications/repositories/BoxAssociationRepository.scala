@@ -52,18 +52,17 @@ trait MovementBoxAssociationRepository {
 @Singleton
 class MovementBoxAssociationRepositoryImpl(
   appConfig: AppConfig,
-  mongoComponent: MongoComponent,
-  clock: Clock
+  mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[BoxAssociation](
       mongoComponent = mongoComponent,
-      collectionName = "movement_box_association",
-      domainFormat = MongoFormats.movementBoxAssociationFormat,
+      collectionName = "box_association",
+      domainFormat = MongoFormats.boxAssociationFormat,
       indexes = Seq(
         IndexModel(Indexes.ascending("updated"), IndexOptions().expireAfter(appConfig.documentTtl, TimeUnit.SECONDS))
       ),
       extraCodecs = Seq(
-        Codecs.playFormatCodec(MongoFormats.movementBoxAssociationFormat),
+        Codecs.playFormatCodec(MongoFormats.boxAssociationFormat),
         Codecs.playFormatCodec(MongoFormats.offsetDateTimeFormat)
       )
     )

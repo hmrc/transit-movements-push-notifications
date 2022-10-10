@@ -17,7 +17,6 @@
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
 import akka.stream.Materializer
-import cats.data.NonEmptyList
 import com.google.inject.ImplementedBy
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
