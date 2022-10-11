@@ -36,7 +36,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.
 
 import java.time.Clock
 import java.util.concurrent.TimeUnit
-import javax.inject.Singleton
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Failure
@@ -44,15 +44,15 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
-@ImplementedBy(classOf[MovementBoxAssociationRepositoryImpl])
-trait MovementBoxAssociationRepository {
-  def insert(movementBox: BoxAssociation): EitherT[Future, MongoError, Unit]
+@ImplementedBy(classOf[BoxAssociationRepositoryImpl])
+trait BoxAssociationRepository {
+  def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit]
 }
 
-@Singleton
-class MovementBoxAssociationRepositoryImpl(
+class BoxAssociationRepositoryImpl @Inject() (
   appConfig: AppConfig,
-  mongoComponent: MongoComponent
+  mongoComponent: MongoComponent,
+  clock: Clock
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[BoxAssociation](
       mongoComponent = mongoComponent,
@@ -66,7 +66,7 @@ class MovementBoxAssociationRepositoryImpl(
         Codecs.playFormatCodec(MongoFormats.offsetDateTimeFormat)
       )
     )
-    with MovementBoxAssociationRepository
+    with BoxAssociationRepository
     with Logging
     with CommonFormats {
 
@@ -78,15 +78,15 @@ class MovementBoxAssociationRepositoryImpl(
       )
     }
 
-  override def insert(movementBox: BoxAssociation): EitherT[Future, MongoError, Unit] =
-    mongoRetry(Try(collection.insertOne(movementBox)) match {
+  override def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit] =
+    mongoRetry(Try(collection.insertOne(boxAssociation)) match {
       case Success(obs) =>
         obs.toFuture().map {
           result =>
             if (result.wasAcknowledged()) {
               Right(())
             } else {
-              Left(InsertNotAcknowledged(s"Insert failed for movement ${movementBox.movementId}"))
+              Left(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id.value}"))
             }
         }
       case Failure(NonFatal(ex)) =>

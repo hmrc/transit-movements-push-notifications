@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse

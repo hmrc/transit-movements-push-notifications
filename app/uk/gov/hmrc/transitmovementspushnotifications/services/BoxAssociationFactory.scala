@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
-import akka.stream.Materializer
 import com.google.inject.ImplementedBy
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-
 import java.time.Clock
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -34,8 +32,6 @@ trait MovementBoxAssociationFactory {
 
 class MovementBoxAssociationFactoryImpl @Inject() (
   clock: Clock
-)(implicit
-  val materializer: Materializer
 ) extends MovementBoxAssociationFactory {
 
   def create(
@@ -43,8 +39,8 @@ class MovementBoxAssociationFactoryImpl @Inject() (
     movementId: MovementId
   ): BoxAssociation =
     BoxAssociation(
+      _id = movementId,
       boxId = boxId,
-      movementId = movementId,
       updated = OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC)
     )
 

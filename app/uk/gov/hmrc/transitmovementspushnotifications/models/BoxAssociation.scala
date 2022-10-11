@@ -18,4 +18,4 @@ package uk.gov.hmrc.transitmovementspushnotifications.models
 
 import java.time.OffsetDateTime
 
-case class BoxAssociation(boxId: BoxId, movementId: MovementId, updated: OffsetDateTime)
+case class BoxAssociation(_id: MovementId, boxId: BoxId, updated: OffsetDateTime)

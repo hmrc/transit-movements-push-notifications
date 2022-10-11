@@ -31,7 +31,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.Presenta
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
-import uk.gov.hmrc.transitmovementspushnotifications.repositories.MovementBoxAssociationRepository
+import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.MovementBoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 
@@ -44,8 +44,8 @@ import scala.concurrent.Future
 class PushNotificationController @Inject() (
   cc: ControllerComponents,
   pushPullNotificationService: PushPullNotificationService,
-  movementBoxAssociationRepository: MovementBoxAssociationRepository,
-  movementBoxAssociationFactory: MovementBoxAssociationFactory
+  boxAssociationRepository: BoxAssociationRepository,
+  boxAssociationFactory: MovementBoxAssociationFactory
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc)
@@ -55,8 +55,8 @@ class PushNotificationController @Inject() (
     implicit request =>
       (for {
         boxId <- getBoxId(request.body.asJson)
-        movementBoxAssociation = movementBoxAssociationFactory.create(boxId, movementId)
-        result <- movementBoxAssociationRepository.insert(movementBoxAssociation).asPresentation
+        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId)
+        result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
         _ => Accepted
@@ -64,15 +64,14 @@ class PushNotificationController @Inject() (
   }
 
   private def getBoxId(requestBodyOpt: Option[JsValue])(implicit hc: HeaderCarrier): EitherT[Future, PresentationError, BoxId] =
-    requestBodyOpt
-      .map {
-        _.validate[BoxAssociationRequest] match {
-          case JsSuccess(box, _) =>
-            if (box.boxId.isDefined) pushPullNotificationService.checkBoxIdExists(box.boxId.get).asPresentation
-            else pushPullNotificationService.getDefaultBoxId(box.clientId).asPresentation
-        }
+    if (requestBodyOpt.isEmpty) EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected json payload"))
+    else
+      requestBodyOpt.get.validate[BoxAssociationRequest] match {
+        case JsSuccess(box, _) =>
+          pushPullNotificationService.checkBoxIdExists(box.boxId.get).asPresentation
+          if (box.boxId.isDefined) pushPullNotificationService.checkBoxIdExists(box.boxId.get).asPresentation
+          else pushPullNotificationService.getDefaultBoxId(box.clientId).asPresentation
+        case _ => EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected clientId to be present in the body"))
       }
-      .getOrElse(
-        Left(PresentationError.badRequestError("Expected clientId to be present in the body"))
-      )
+
 }

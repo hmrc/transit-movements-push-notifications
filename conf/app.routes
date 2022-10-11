@@ -1,3 +1,3 @@
 # microservice specific routes
 
-GET        /traders/movements/:movementId/box/             uk.gov.hmrc.transitmovementspushnotifications.controllers.BoxAssociationController.createBoxAssociation(movementId: MovementId)
+GET        /traders/movements/:movementId/box/             uk.gov.hmrc.transitmovementspushnotifications.controllers.PushNotificationController.createBoxAssociation(movementId: MovementId)

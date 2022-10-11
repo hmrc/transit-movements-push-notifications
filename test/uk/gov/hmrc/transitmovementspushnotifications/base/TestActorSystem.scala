@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.base
 
-import play.api.libs.json.Json
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import org.scalatest.Suite
 
-case class BoxId(value: String) extends AnyVal
+object TestActorSystem {
+  val system: ActorSystem = ActorSystem("test")
+}
 
-object BoxId {
-  implicit val boxIdFormat = Json.format[BoxId]
+trait TestActorSystem { self: Suite =>
+  implicit val system: ActorSystem        = TestActorSystem.system
+  implicit val materializer: Materializer = Materializer(TestActorSystem.system)
 }
