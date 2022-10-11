@@ -71,8 +71,8 @@ trait ModelGenerators extends BaseGenerators {
   implicit lazy val arbitraryBoxAssociation: Arbitrary[BoxAssociation] =
     Arbitrary {
       for {
-        boxId      <- arbitrary[BoxId]
         movementId <- arbitrary[MovementId]
+        boxId      <- arbitrary[BoxId]
         updated    <- arbitrary[OffsetDateTime]
       } yield BoxAssociation(movementId, boxId, updated)
     }

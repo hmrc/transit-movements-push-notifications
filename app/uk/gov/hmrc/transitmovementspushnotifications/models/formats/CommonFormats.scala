@@ -23,7 +23,10 @@ import play.api.libs.json.JsResult
 import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 import play.api.libs.functional.syntax.toInvariantFunctorOps
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 
 object CommonFormats extends CommonFormats
 
@@ -37,10 +40,8 @@ trait CommonFormats {
         _.toList
       )
 
-//  implicit val mrnFormat: Format[MovementReferenceNumber] = Json.valueFormat[MovementReferenceNumber]
-//  implicit val eoriNumberFormat: Format[EORINumber]       = Json.valueFormat[EORINumber]
-//  implicit val messageIdFormat: Format[MessageId]         = Json.valueFormat[MessageId]
-//  implicit val departureIdFormat: Format[DepartureId]     = Json.valueFormat[DepartureId]
+  implicit val boxIdFormat: Format[BoxId]           = Json.valueFormat[BoxId]
+  implicit val movementIdFormat: Format[MovementId] = Json.valueFormat[MovementId]
 
   def enumFormat[A](values: Set[A])(getKey: A => String): Format[A] = new Format[A] {
 

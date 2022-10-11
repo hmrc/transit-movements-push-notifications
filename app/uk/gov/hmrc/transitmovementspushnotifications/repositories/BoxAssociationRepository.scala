@@ -62,7 +62,9 @@ class BoxAssociationRepositoryImpl @Inject() (
       ),
       extraCodecs = Seq(
         Codecs.playFormatCodec(MongoFormats.boxAssociationFormat),
-        Codecs.playFormatCodec(MongoFormats.offsetDateTimeFormat)
+        Codecs.playFormatCodec(MongoFormats.offsetDateTimeFormat),
+        Codecs.playFormatCodec(MongoFormats.boxIdFormat),
+        Codecs.playFormatCodec(MongoFormats.movementIdFormat)
       )
     )
     with BoxAssociationRepository

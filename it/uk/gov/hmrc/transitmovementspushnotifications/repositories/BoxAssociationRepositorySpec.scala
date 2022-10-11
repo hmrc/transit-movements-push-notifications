@@ -31,8 +31,6 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
-
-import java.time.Clock
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -74,18 +72,9 @@ class BoxAssociationRepositorySpec
     )
 
     val firstItem = await {
-      repository.collection.find(Filters.eq("movementId", boxAssociation._id.value)).first().toFuture()
+      repository.collection.find(Filters.eq("_id", boxAssociation._id.value)).first().toFuture()
     }
 
     firstItem._id.value should be(boxAssociation._id.value)
-  }
-
-  "insert" should "return a mongo error when inserting a movement that already exists" in {
-
-    val result = await(
-      repository.insert(boxAssociation).value
-    )
-
-    result should be(boxAssociation._id.value)
   }
 }

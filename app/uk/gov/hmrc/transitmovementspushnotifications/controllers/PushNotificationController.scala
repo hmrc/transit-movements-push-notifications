@@ -59,19 +59,18 @@ class PushNotificationController @Inject() (
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
-        _ => Accepted
+        _ => Created
       )
   }
 
   private def getBoxId(requestBodyOpt: Option[JsValue])(implicit hc: HeaderCarrier): EitherT[Future, PresentationError, BoxId] =
-    if (requestBodyOpt.isEmpty) EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected json payload"))
-    else
-      requestBodyOpt.get.validate[BoxAssociationRequest] match {
-        case JsSuccess(box, _) =>
-          pushPullNotificationService.checkBoxIdExists(box.boxId.get).asPresentation
-          if (box.boxId.isDefined) pushPullNotificationService.checkBoxIdExists(box.boxId.get).asPresentation
-          else pushPullNotificationService.getDefaultBoxId(box.clientId).asPresentation
-        case _ => EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected clientId to be present in the body"))
+    requestBodyOpt
+      .map(_.validate[BoxAssociationRequest])
+      .map {
+        case JsSuccess(BoxAssociationRequest(_, Some(boxId)), _) => pushPullNotificationService.checkBoxIdExists(boxId).asPresentation
+        case JsSuccess(BoxAssociationRequest(clientId, None), _) => pushPullNotificationService.getDefaultBoxId(clientId).asPresentation
+        case _                                                   => EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected clientId to be present in the body"))
       }
+      .getOrElse(EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected json payload")))
 
 }
