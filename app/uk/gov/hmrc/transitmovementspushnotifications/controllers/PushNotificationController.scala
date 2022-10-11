@@ -16,29 +16,20 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
-import cats.data.EitherT
-import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.MovementBoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
-
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 
 @Singleton()
 class PushNotificationController @Inject() (
@@ -51,10 +42,10 @@ class PushNotificationController @Inject() (
 ) extends BackendController(cc)
     with ConvertError {
 
-  def createBoxAssociation(movementId: MovementId): Action[AnyContent] = Action.async {
+  def createBoxAssociation(movementId: MovementId): Action[JsValue] = Action.async(parse.json) {
     implicit request =>
       (for {
-        boxId <- getBoxId(request.body.asJson)
+        boxId <- pushPullNotificationService.getBoxId(request.body)
         movementBoxAssociation = boxAssociationFactory.create(boxId, movementId)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
@@ -62,15 +53,5 @@ class PushNotificationController @Inject() (
         _ => Created
       )
   }
-
-  private def getBoxId(requestBodyOpt: Option[JsValue])(implicit hc: HeaderCarrier): EitherT[Future, PresentationError, BoxId] =
-    requestBodyOpt
-      .map(_.validate[BoxAssociationRequest])
-      .map {
-        case JsSuccess(BoxAssociationRequest(_, Some(boxId)), _) => pushPullNotificationService.checkBoxIdExists(boxId).asPresentation
-        case JsSuccess(BoxAssociationRequest(clientId, None), _) => pushPullNotificationService.getDefaultBoxId(clientId).asPresentation
-        case _                                                   => EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected clientId to be present in the body"))
-      }
-      .getOrElse(EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected json payload")))
 
 }

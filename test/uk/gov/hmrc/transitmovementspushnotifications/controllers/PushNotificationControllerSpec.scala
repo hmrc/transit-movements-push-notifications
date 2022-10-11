@@ -25,12 +25,11 @@ import org.mockito.ArgumentMatchers.any
 import play.api.http.HeaderNames
 import play.api.http.MimeTypes
 import play.api.http.Status.BAD_REQUEST
+import play.api.http.Status.CREATED
 import play.api.http.Status.INTERNAL_SERVER_ERROR
-import play.api.mvc.AnyContent
 import play.api.mvc.Request
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.mvc.Results.Accepted
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
@@ -39,6 +38,7 @@ import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
@@ -47,8 +47,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.services.MovementBoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-
 import java.time.OffsetDateTime
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -64,7 +62,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   val now = OffsetDateTime.now
 
-  lazy val boxAssociationRequest = arbitraryBoxAssociationRequest.arbitrary.sample.get
+  lazy val boxAssociationRequest = arbitraryBoxAssociationRequest.arbitrary.sample.get.copy(boxId = Some(BoxId("123")))
 
   lazy val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get.copy(boxId = boxAssociationRequest.boxId.value)
 
@@ -72,8 +70,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   def fakeRequest[A](
     method: String,
-    body: String
-  ): Request[String] =
+    body: JsValue
+  ): Request[JsValue] =
     FakeRequest(
       method = method,
       uri = routes.PushNotificationController.createBoxAssociation(boxAssociation._id).url,
@@ -81,11 +79,10 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       body = body
     )
 
-  override def afterEach() {
+  override def afterEach() = {
     reset(mockPushPullNotificationService)
     reset(mockMovementBoxAssociationRepository)
     reset(mockMovementBoxAssociationFactory)
-    super.afterEach()
   }
 
   val controller =
@@ -98,15 +95,13 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   "createBoxAssociation" - {
 
-    val validBody: String = Json.stringify(
-      Json.obj(
-        "clientId" -> boxAssociationRequest.clientId
-      )
+    val validBody: JsValue = Json.obj(
+      "clientId" -> boxAssociationRequest.clientId
     )
 
-    "must return Accepted if successfully inserts box association" in {
+    "must return Created if successfully inserts box association" in {
 
-      when(mockPushPullNotificationService.checkBoxIdExists(any[String].asInstanceOf[BoxId])(any[ExecutionContext], any[HeaderCarrier]))
+      when(mockPushPullNotificationService.getBoxId(any[JsValue])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
       when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId]))
@@ -120,18 +115,13 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       val result =
         controller.createBoxAssociation(boxAssociation._id)(request)
 
-      //status(result) mustBe Accepted
-
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Element messageSender not found"
-      )
+      status(result) mustBe CREATED
     }
 
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
-      when(mockPushPullNotificationService.checkBoxIdExists(any[String].asInstanceOf[BoxId])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PushPullNotificationError.InvalidBoxId(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
+      when(mockPushPullNotificationService.getBoxId(any[JsValue])(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(EitherT.leftT(PresentationError.badRequestError(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
 
       val request = fakeRequest(POST, validBody)
 
@@ -141,20 +131,14 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe BAD_REQUEST
       contentAsJson(result) mustBe Json.obj(
         "code"    -> "BAD_REQUEST",
-        "message" -> "Element messageSender not found"
+        "message" -> "Box id provided does not exist: 123"
       )
     }
 
     "must return BAD_REQUEST when clientId and boxId are not present in the body" in {
 
-      when(mockPushPullNotificationService.checkBoxIdExists(any[String].asInstanceOf[BoxId])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.rightT(boxId))
-
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId]))
-        .thenReturn(boxAssociation)
-
-      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
-        .thenReturn(EitherT.rightT(Right(())))
+      when(mockPushPullNotificationService.getBoxId(any[JsValue])(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(EitherT.leftT(PresentationError.badRequestError("Expected clientId to be present in the body")))
 
       val request = fakeRequest(POST, validBody)
 
@@ -164,14 +148,14 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe BAD_REQUEST
       contentAsJson(result) mustBe Json.obj(
         "code"    -> "BAD_REQUEST",
-        "message" -> "Element messageSender not found"
+        "message" -> "Expected clientId to be present in the body"
       )
     }
 
-    "must return INTERNAL_SERVER_ERROR when theres an unexpected PPNS failure" in {
+    "must return INTERNAL_SERVER_ERROR when there's an unexpected PPNS failure" in {
 
-      when(mockPushPullNotificationService.checkBoxIdExists(any[String].asInstanceOf[BoxId])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(None)))
+      when(mockPushPullNotificationService.getBoxId(any[JsValue])(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(EitherT.leftT(PresentationError.internalServiceError("Unexpected error")))
 
       val request = fakeRequest(POST, validBody)
 
@@ -180,14 +164,14 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       status(result) mustBe INTERNAL_SERVER_ERROR
       contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Element messageSender not found"
+        "code"    -> "INTERNAL_SERVER_ERROR",
+        "message" -> "Unexpected error"
       )
     }
 
     "must return INTERNAL_SERVER_ERROR if there's a mongo failure when inserting box association" in {
 
-      when(mockPushPullNotificationService.checkBoxIdExists(any[String].asInstanceOf[BoxId])(any[ExecutionContext], any[HeaderCarrier]))
+      when(mockPushPullNotificationService.getBoxId(any[JsValue])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
       when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId]))
@@ -201,7 +185,11 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       val result =
         controller.createBoxAssociation(boxAssociation._id)(request)
 
-      status(result) mustBe Accepted
+      status(result) mustBe INTERNAL_SERVER_ERROR
+      contentAsJson(result) mustBe Json.obj(
+        "code"    -> "INTERNAL_SERVER_ERROR",
+        "message" -> s"Insert failed for movement ${boxAssociation._id}"
+      )
     }
   }
 }

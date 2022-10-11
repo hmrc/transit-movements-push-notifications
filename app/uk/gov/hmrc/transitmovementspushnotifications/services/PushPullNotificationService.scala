@@ -18,9 +18,14 @@ package uk.gov.hmrc.transitmovementspushnotifications.services
 
 import cats.data.EitherT
 import com.google.inject.ImplementedBy
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsValue
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 
 import javax.inject.Inject
@@ -32,15 +37,24 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[PushPullNotificationServiceImpl])
 trait PushPullNotificationService {
 
-  def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
+  def getBoxId(requestBody: JsValue)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PresentationError, BoxId]
 
-  def checkBoxIdExists(boxId: BoxId)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 }
 
 @Singleton
-class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: PushPullNotificationConnector) extends PushPullNotificationService {
+class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: PushPullNotificationConnector)
+    extends PushPullNotificationService
+    with ConvertError {
 
-  override def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
+  override def getBoxId(body: JsValue)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PresentationError, BoxId] =
+    body
+      .validate[BoxAssociationRequest] match {
+      case JsSuccess(BoxAssociationRequest(_, Some(boxId)), _) => checkBoxIdExists(boxId).asPresentation
+      case JsSuccess(BoxAssociationRequest(clientId, None), _) => getDefaultBoxId(clientId).asPresentation
+      case _                                                   => EitherT.leftT[Future, BoxId](PresentationError.badRequestError("Expected clientId to be present in the body"))
+    }
+
+  private def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     EitherT(
       pushPullNotificationConnector
         .getBox(clientId)
@@ -53,7 +67,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
 
-  override def checkBoxIdExists(boxId: BoxId)(implicit
+  private def checkBoxIdExists(boxId: BoxId)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): EitherT[Future, PushPullNotificationError, BoxId] =

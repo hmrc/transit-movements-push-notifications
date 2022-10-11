@@ -17,7 +17,6 @@
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
-import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 
@@ -42,7 +41,6 @@ trait ConvertError {
     def convert(mongoError: MongoError): PresentationError = mongoError match {
       case UnexpectedError(ex)            => PresentationError.internalServiceError(cause = ex)
       case InsertNotAcknowledged(message) => PresentationError.internalServiceError(message = message)
-      case UpdateNotAcknowledged(message) => PresentationError.internalServiceError(message = message)
       case DocumentNotFound(message)      => PresentationError.notFoundError(message = message)
     }
   }

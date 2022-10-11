@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models.responses
+package uk.gov.hmrc.transitmovementspushnotifications.utils
 
-import play.api.libs.json.Json
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
+import com.codahale.metrics.MetricRegistry
+import com.kenshoo.play.metrics.Metrics
 
-case class BoxResponse(boxId: BoxId)
-
-object BoxResponse extends CommonFormats {
-  implicit val boxResponseFormat = Json.format[BoxResponse]
+class TestMetrics extends Metrics {
+  override def defaultRegistry: MetricRegistry = new MetricRegistry
+  override def toJson: String                  = ""
 }

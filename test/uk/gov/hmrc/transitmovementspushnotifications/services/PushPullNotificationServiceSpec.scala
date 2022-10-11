@@ -18,21 +18,21 @@ package uk.gov.hmrc.transitmovementspushnotifications.services
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
-import org.scalacheck.Arbitrary.arbitrary
 import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with TestActorSystem {
 
-  val clientId    = arbitrary[String].sample.get
+  val clientId    = "clientId"
   val boxResponse = arbitraryBoxResponse.arbitrary.sample.get
 
   val mockPushPullNotificationConnector = mock[PushPullNotificationConnector]
@@ -42,13 +42,22 @@ class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with
 
   val sut = new PushPullNotificationServiceImpl(mockPushPullNotificationConnector)
 
-  "getDefaultBoxId" - {
-    "when given a valid client id it returns the default box id" in {
+  val bodyWithoutBoxId: JsValue = Json.obj(
+    "clientId" -> "ID_123"
+  )
+
+  val bodyWithClientAndBoxId: JsValue = Json.obj(
+    "clientId" -> "ID_456",
+    "boxId"    -> boxResponse.boxId.value
+  )
+
+  "getBoxId" - {
+    "when given a payload with client id and no boxId it returns the default box id" in {
 
       when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(Future.successful(boxResponse))
 
-      val result = sut.getDefaultBoxId(clientId)
+      val result = sut.getBoxId(bodyWithoutBoxId)
 
       whenReady(result.value) {
         r =>
@@ -57,28 +66,23 @@ class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with
       }
     }
 
-    "when an upstream error is returned by the connector it returns UnexpectedError" in {
-      val exception = UpstreamErrorResponse("error", INTERNAL_SERVER_ERROR)
-
+    "when an upstream error is returned by the connector it returns a Left" in {
       when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(Future.failed(exception))
+        .thenReturn(Future.failed(UpstreamErrorResponse("error", INTERNAL_SERVER_ERROR)))
 
-      val result = sut.getDefaultBoxId(clientId)
+      val result = sut.getBoxId(bodyWithoutBoxId)
 
       whenReady(result.value) {
         r =>
-          r.isRight mustBe false
-          r mustBe Left(PushPullNotificationError.UnexpectedError(thr = Some(exception)))
+          r.isLeft mustBe true
       }
     }
-  }
 
-  "checkIfBoxExists" - {
-    "when given a valid box id it returns the given box id" in {
+    "when given a payload with a valid box id it returns the given box id" in {
       when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(Future.successful(Seq(boxResponse)))
 
-      val result = sut.checkBoxIdExists(boxResponse.boxId)
+      val result = sut.getBoxId(bodyWithClientAndBoxId)
 
       whenReady(result.value) {
         r =>
@@ -87,19 +91,5 @@ class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with
       }
     }
 
-    "when an upstream error is returned by the connector it returns UnexpectedError" in {
-      val exception = UpstreamErrorResponse("error", INTERNAL_SERVER_ERROR)
-
-      when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(Future.failed(exception))
-
-      val result = sut.checkBoxIdExists(boxResponse.boxId)
-
-      whenReady(result.value) {
-        r =>
-          r.isRight mustBe false
-          r mustBe Left(PushPullNotificationError.UnexpectedError(thr = Some(exception)))
-      }
-    }
   }
 }

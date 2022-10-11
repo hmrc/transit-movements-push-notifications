@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
 import io.lemonlabs.uri.QueryString
 import io.lemonlabs.uri.Url
 import io.lemonlabs.uri.UrlPath
