@@ -24,6 +24,15 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
   .settings(CodeCoverageSettings.settings: _*)
   .settings(inThisBuild(buildSettings))
 
+lazy val itSettings = Seq(
+  // Must fork so that config system properties are set
+  fork := true,
+  unmanagedResourceDirectories += (baseDirectory.value / "it" / "resources"),
+  javaOptions ++= Seq(
+    "-Dlogger.resource=it.logback.xml"
+  )
+)
+
 // Settings for the whole build
 lazy val buildSettings = Def.settings(
   scalafmtOnCompile := true

@@ -51,8 +51,7 @@ trait BoxAssociationRepository {
 
 class BoxAssociationRepositoryImpl @Inject() (
   appConfig: AppConfig,
-  mongoComponent: MongoComponent,
-  clock: Clock
+  mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[BoxAssociation](
       mongoComponent = mongoComponent,
