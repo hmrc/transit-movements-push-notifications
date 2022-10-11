@@ -16,7 +16,11 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
+import akka.util.Timeout
 import cats.syntax.all._
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
@@ -29,7 +33,12 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNot
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
 
+import scala.concurrent.duration.DurationInt
+
 class ConvertErrorSpec extends SpecBase {
+
+  implicit val defaultPatience =
+    PatienceConfig(timeout = Span(2, Seconds), interval = Span(5, Millis))
 
   object Harness extends ConvertError
 
@@ -82,7 +91,7 @@ class ConvertErrorSpec extends SpecBase {
     "for a failure" in {
       val input = Left[PushPullNotificationError, Unit](InvalidBoxId("id_1234")).toEitherT[Future]
       whenReady(input.asPresentation.value) {
-        _ mustBe Left(StandardError("Element test not found", BadRequest))
+        _ mustBe Left(StandardError("id_1234", BadRequest))
       }
     }
   }
