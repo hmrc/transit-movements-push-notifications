@@ -67,9 +67,11 @@ class BoxAssociationRepositorySpec
 
   "insert" should "add the given box association to the database" in {
 
-    await(
+    val result = await(
       repository.insert(boxAssociation).value
     )
+
+    result should be(Right(()))
 
     val firstItem = await {
       repository.collection.find(Filters.eq("_id", boxAssociation._id.value)).first().toFuture()

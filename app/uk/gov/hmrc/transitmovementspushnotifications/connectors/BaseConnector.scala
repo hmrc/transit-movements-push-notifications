@@ -31,7 +31,7 @@ trait BaseConnector {
 
   val getAllBoxesRoute = UrlPath.parse("/cmb/box")
 
-  def getBoxRoute(clientId: String): UrlPath = Url(path = "box", query = QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))).path
+  def getBoxRoute(clientId: String): UrlPath = Url(path = "/box", query = QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))).path
 
   implicit class HttpResponseHelpers(response: HttpResponse) {
 

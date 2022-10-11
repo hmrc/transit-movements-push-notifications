@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import akka.util.Timeout
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
@@ -38,16 +37,12 @@ import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 import scala.util.Failure
-import scala.util.Success
 
 class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with ScalaFutures with GuiceWiremockSuite with ModelGenerators {
   override protected def portConfigKey: Seq[String] = Seq("microservice.services.push-pull-notifications-api.port")
 
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
-
-  implicit val timeout: Timeout = 5.seconds
 
   implicit val defaultPatience =
     PatienceConfig(timeout = Span(2, Seconds), interval = Span(5, Millis))

@@ -26,11 +26,13 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with TestActorSystem {
+class PushNotificationServiceSpec extends SpecBase with ModelGenerators with TestActorSystem {
 
   val clientId    = "clientId"
   val boxResponse = arbitraryBoxResponse.arbitrary.sample.get
@@ -41,6 +43,8 @@ class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with
   implicit val hc: HeaderCarrier    = HeaderCarrier()
 
   val sut = new PushPullNotificationServiceImpl(mockPushPullNotificationConnector)
+
+  val emptyBody: JsValue = Json.obj()
 
   val bodyWithoutBoxId: JsValue = Json.obj(
     "clientId" -> "ID_123"
@@ -88,6 +92,19 @@ class PushPullNotificationServiceSpec extends SpecBase with ModelGenerators with
         r =>
           r.isRight mustBe true
           r mustBe Right(boxResponse.boxId)
+      }
+    }
+
+    "when given a payload without clientId and boxId returns badRequestError" in {
+      when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(Future.successful(Seq(boxResponse)))
+
+      val result = sut.getBoxId(emptyBody)
+
+      whenReady(result.value) {
+        r =>
+          r.isLeft mustBe true
+          r mustBe Left(PresentationError.badRequestError("Expected clientId to be present in the body"))
       }
     }
 

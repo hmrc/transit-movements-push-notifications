@@ -1,4 +1,5 @@
 import play.sbt.routes.RoutesKeys
+import scoverage.ScoverageKeys
 import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin.publishingSettings
 
@@ -23,6 +24,31 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(CodeCoverageSettings.settings: _*)
   .settings(inThisBuild(buildSettings))
+
+// Scoverage exclusions and minimums
+lazy val scoverageSettings = Def.settings(
+  Test / parallelExecution := false,
+  ScoverageKeys.coverageMinimumStmtTotal := 90,
+  ScoverageKeys.coverageFailOnMinimum := true,
+  ScoverageKeys.coverageHighlighting := true,
+  ScoverageKeys.coverageExcludedPackages := Seq(
+    "<empty>",
+    "Reverse.*",
+    ".*(config|views.*)",
+    ".*(BuildInfo|Routes).*"
+  ).mkString(";"),
+  ScoverageKeys.coverageExcludedFiles := Seq(
+    "<empty>",
+    "Reverse.*",
+    ".*repositories.*",
+    ".*documentation.*",
+    ".*BuildInfo.*",
+    ".*javascript.*",
+    ".*Routes.*",
+    ".*GuiceInjector",
+    ".*Test.*"
+  ).mkString(";")
+)
 
 lazy val itSettings = Seq(
   // Must fork so that config system properties are set

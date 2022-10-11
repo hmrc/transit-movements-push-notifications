@@ -33,8 +33,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.formats.MongoFormats
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
-
-import java.time.Clock
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
