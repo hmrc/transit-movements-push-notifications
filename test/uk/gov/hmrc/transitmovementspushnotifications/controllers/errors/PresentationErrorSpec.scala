@@ -21,8 +21,6 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.Json
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.UpstreamServiceError
 
 class PresentationErrorSpec extends AnyFreeSpec with Matchers with MockitoSugar {
 
