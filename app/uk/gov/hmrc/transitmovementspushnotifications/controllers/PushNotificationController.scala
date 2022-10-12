@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
+import cats.data.EitherT
+import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -23,13 +25,17 @@ import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
+
 import javax.inject.Inject
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton()
 class PushNotificationController @Inject() (
@@ -45,7 +51,8 @@ class PushNotificationController @Inject() (
   def createBoxAssociation(movementId: MovementId): Action[JsValue] = Action.async(parse.json) {
     implicit request =>
       (for {
-        boxId <- pushPullNotificationService.getBoxId(request.body)
+        boxAssociation <- getBoxAssociationRequest(request.body)
+        boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
         movementBoxAssociation = boxAssociationFactory.create(boxId, movementId)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
@@ -53,5 +60,12 @@ class PushNotificationController @Inject() (
         _ => Created
       )
   }
+
+  def getBoxAssociationRequest(body: JsValue): EitherT[Future, PresentationError, BoxAssociationRequest] =
+    body
+      .validate[BoxAssociationRequest] match {
+      case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
+      case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId to be present in the body"))
+    }
 
 }
