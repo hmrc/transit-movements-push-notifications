@@ -44,7 +44,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
-import uk.gov.hmrc.transitmovementspushnotifications.services.MovementBoxAssociationFactory
+import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import java.time.OffsetDateTime
@@ -58,7 +58,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   val mockPushPullNotificationService      = mock[PushPullNotificationService]
   val mockMovementBoxAssociationRepository = mock[BoxAssociationRepository]
-  val mockMovementBoxAssociationFactory    = mock[MovementBoxAssociationFactory]
+  val mockMovementBoxAssociationFactory    = mock[BoxAssociationFactory]
 
   val now = OffsetDateTime.now
 

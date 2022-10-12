@@ -25,7 +25,7 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
-import uk.gov.hmrc.transitmovementspushnotifications.services.MovementBoxAssociationFactory
+import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,7 +36,7 @@ class PushNotificationController @Inject() (
   cc: ControllerComponents,
   pushPullNotificationService: PushPullNotificationService,
   boxAssociationRepository: BoxAssociationRepository,
-  boxAssociationFactory: MovementBoxAssociationFactory
+  boxAssociationFactory: BoxAssociationFactory
 )(implicit
   ec: ExecutionContext
 ) extends BackendController(cc)

@@ -25,14 +25,14 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import javax.inject.Inject
 
-@ImplementedBy(classOf[MovementBoxAssociationFactoryImpl])
-trait MovementBoxAssociationFactory {
+@ImplementedBy(classOf[BoxAssociationFactoryImpl])
+trait BoxAssociationFactory {
   def create(boxId: BoxId, movementId: MovementId): BoxAssociation
 }
 
-class MovementBoxAssociationFactoryImpl @Inject() (
+class BoxAssociationFactoryImpl @Inject() (
   clock: Clock
-) extends MovementBoxAssociationFactory {
+) extends BoxAssociationFactory {
 
   def create(
     boxId: BoxId,

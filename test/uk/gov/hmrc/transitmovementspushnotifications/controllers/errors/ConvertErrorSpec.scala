@@ -30,7 +30,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
 
 import scala.concurrent.duration.DurationInt
@@ -55,9 +55,16 @@ class ConvertErrorSpec extends SpecBase {
 
     "for a failure" in {
       val exception = new Exception("mongo failure")
-      val input     = Left[MongoError, Unit](UnexpectedError(Some(exception))).toEitherT[Future]
-      whenReady(input.asPresentation.value) {
-        _ mustBe Left(InternalServiceError("Internal server error", InternalServerError, Some(exception)))
+      Seq(
+        UnexpectedError(Some(exception))       -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
+        InsertNotAcknowledged("Insert failed") -> InternalServiceError("Insert failed", InternalServerError, None),
+        DocumentNotFound("Movement not found") -> StandardError("Movement not found", ErrorCode.NotFound)
+      ).foreach {
+        mongoAndPresentationError =>
+          val input = Left[MongoError, Unit](mongoAndPresentationError._1).toEitherT[Future]
+          whenReady(input.asPresentation.value) {
+            _ mustBe Left(mongoAndPresentationError._2)
+          }
       }
     }
   }
@@ -89,9 +96,16 @@ class ConvertErrorSpec extends SpecBase {
     }
 
     "for a failure" in {
-      val input = Left[PushPullNotificationError, Unit](InvalidBoxId("id_1234")).toEitherT[Future]
-      whenReady(input.asPresentation.value) {
-        _ mustBe Left(StandardError("id_1234", BadRequest))
+      val exception = new Exception("PPNS failure")
+      Seq(
+        PushPullNotificationError.UnexpectedError(Some(exception)) -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
+        InvalidBoxId("Box id does not exist")                      -> StandardError("Box id does not exist", ErrorCode.BadRequest)
+      ).foreach {
+        ppnsAndPresentationError =>
+          val input = Left[PushPullNotificationError, Unit](ppnsAndPresentationError._1).toEitherT[Future]
+          whenReady(input.asPresentation.value) {
+            _ mustBe Left(ppnsAndPresentationError._2)
+          }
       }
     }
   }
