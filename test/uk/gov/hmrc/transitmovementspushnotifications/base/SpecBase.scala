@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.base
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import play.api.Configuration
-import io.lemonlabs.uri.Url
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.EitherValues
+import org.scalatest.OptionValues
+import org.scalatestplus.mockito.MockitoSugar
 
-@Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
-
-  val pushPullUrl = Url.parse(servicesConfig.baseUrl("push-pull-notifications-api"))
-
-  lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
-  lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
-
-}
+trait SpecBase extends AnyFreeSpec with Matchers with MockitoSugar with ScalaFutures with OptionValues with EitherValues with BeforeAndAfterEach {}

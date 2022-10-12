@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.runtime
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import play.api.Configuration
-import io.lemonlabs.uri.Url
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.inject.SimpleModule
+import play.api.inject.bind
 
-@Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
+import java.time.Clock
 
-  val pushPullUrl = Url.parse(servicesConfig.baseUrl("push-pull-notifications-api"))
-
-  lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
-  lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
-
-}
+class SystemClockModule
+    extends SimpleModule(
+      (_, _) => Seq(bind[Clock].toInstance(Clock.systemUTC()))
+    )

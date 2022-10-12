@@ -16,18 +16,8 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.config
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import play.api.Configuration
-import io.lemonlabs.uri.Url
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+object Constants {
 
-@Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
-
-  val pushPullUrl = Url.parse(servicesConfig.baseUrl("push-pull-notifications-api"))
-
-  lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
-  lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
+  val BoxName = "customs/transits##2.0##notificationUrl"
 
 }

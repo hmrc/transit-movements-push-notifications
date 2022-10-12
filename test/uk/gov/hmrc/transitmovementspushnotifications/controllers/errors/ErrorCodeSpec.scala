@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import play.api.Configuration
-import io.lemonlabs.uri.Url
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.json.JsString
+import play.api.libs.json.JsSuccess
+import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 
-@Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
+class ErrorCodeSpec extends SpecBase {
 
-  val pushPullUrl = Url.parse(servicesConfig.baseUrl("push-pull-notifications-api"))
+  "writes" in {
+    ErrorCode.errorCodes.foreach {
+      errorCode =>
+        val json = JsString(errorCode.code)
 
-  lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
-  lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
-
+        json.validate[ErrorCode] match {
+          case JsSuccess(code, _) => code mustBe errorCode
+          case _                  => fail("failed to match error code")
+        }
+    }
+  }
 }

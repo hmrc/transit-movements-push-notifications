@@ -14,20 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import play.api.Configuration
-import io.lemonlabs.uri.Url
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+sealed abstract class HeaderExtractError
 
-@Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
-
-  val pushPullUrl = Url.parse(servicesConfig.baseUrl("push-pull-notifications-api"))
-
-  lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
-  lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
-
+object HeaderExtractError {
+  case class NoHeaderFound(element: String) extends HeaderExtractError
 }

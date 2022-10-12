@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.models
 
-import javax.inject.Inject
-import javax.inject.Singleton
-import play.api.Configuration
-import io.lemonlabs.uri.Url
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.json.Json
+import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
 
-@Singleton
-class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig) {
+import java.time.OffsetDateTime
 
-  val pushPullUrl = Url.parse(servicesConfig.baseUrl("push-pull-notifications-api"))
+case class BoxAssociation(_id: MovementId, boxId: BoxId, updated: OffsetDateTime)
 
-  lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
-  lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
-
+object BoxAssociation extends CommonFormats {
+  implicit val boxAssociationFormat = Json.format[BoxAssociation]
 }
