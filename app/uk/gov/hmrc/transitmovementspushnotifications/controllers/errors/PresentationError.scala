@@ -48,7 +48,7 @@ object PresentationError extends CommonFormats with Logging {
   ): PresentationError =
     UpstreamServiceError(message, code, cause)
 
-  def internalServiceError(
+  def internalServerError(
     message: String = "Internal server error",
     code: ErrorCode = ErrorCode.InternalServerError,
     cause: Option[Throwable] = None
@@ -99,5 +99,5 @@ case class InternalServiceError(
 object InternalServiceError {
 
   def causedBy(cause: Throwable): PresentationError =
-    PresentationError.internalServiceError(cause = Some(cause))
+    PresentationError.internalServerError(cause = Some(cause))
 }

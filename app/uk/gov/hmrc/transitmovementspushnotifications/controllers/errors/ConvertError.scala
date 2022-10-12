@@ -39,8 +39,8 @@ trait ConvertError {
     import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 
     def convert(mongoError: MongoError): PresentationError = mongoError match {
-      case UnexpectedError(ex)            => PresentationError.internalServiceError(cause = ex)
-      case InsertNotAcknowledged(message) => PresentationError.internalServiceError(message = message)
+      case UnexpectedError(ex)            => PresentationError.internalServerError(cause = ex)
+      case InsertNotAcknowledged(message) => PresentationError.internalServerError(message = message)
       case DocumentNotFound(message)      => PresentationError.notFoundError(message = message)
     }
   }
@@ -57,7 +57,7 @@ trait ConvertError {
     import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
     def convert(headerExtractError: PushPullNotificationError): PresentationError = headerExtractError match {
-      case UnexpectedError(ex) => PresentationError.internalServiceError(cause = ex)
+      case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
       case InvalidBoxId(msg)   => PresentationError.badRequestError(message = msg)
     }
   }

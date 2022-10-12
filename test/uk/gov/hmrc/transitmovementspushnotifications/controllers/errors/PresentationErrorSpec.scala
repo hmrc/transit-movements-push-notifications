@@ -40,6 +40,14 @@ class PresentationErrorSpec extends AnyFreeSpec with Matchers with MockitoSugar 
 
     "for NotFound" in testStandard(PresentationError.notFoundError, "not found", "NOT_FOUND")
 
+    "for InternalServerError" in {
+      val error = PresentationError.internalServerError("internal error")
+
+      val result = Json.toJson(error)
+
+      result mustBe Json.obj("message" -> "internal error", "code" -> "INTERNAL_SERVER_ERROR")
+    }
+
     Seq(Some(new IllegalStateException("message")), None).foreach {
       exception =>
         val textFragment = exception
@@ -52,7 +60,7 @@ class PresentationErrorSpec extends AnyFreeSpec with Matchers with MockitoSugar 
           val exception = new IllegalStateException("message")
 
           // when we create a error for this
-          val sut = PresentationError.internalServiceError(cause = Some(exception))
+          val sut = PresentationError.internalServerError(cause = Some(exception))
 
           // and when we turn it to Json
           val json = Json.toJson(sut)

@@ -18,11 +18,6 @@ package uk.gov.hmrc.transitmovementspushnotifications.models.formats
 
 import cats.data.NonEmptyList
 import play.api.libs.json.Format
-import play.api.libs.json.JsError
-import play.api.libs.json.JsResult
-import play.api.libs.json.JsString
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.functional.syntax.toInvariantFunctorOps
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
@@ -43,19 +38,4 @@ trait CommonFormats {
   implicit val boxIdFormat: Format[BoxId]           = Json.valueFormat[BoxId]
   implicit val movementIdFormat: Format[MovementId] = Json.valueFormat[MovementId]
 
-  def enumFormat[A](values: Set[A])(getKey: A => String): Format[A] = new Format[A] {
-
-    override def writes(a: A): JsValue =
-      JsString(getKey(a))
-
-    override def reads(json: JsValue): JsResult[A] = json match {
-      case JsString(str) =>
-        values
-          .find(getKey(_) == str)
-          .map(JsSuccess(_))
-          .getOrElse(JsError("error.expected.validenumvalue"))
-      case _ =>
-        JsError("error.expected.enumstring")
-    }
-  }
 }
