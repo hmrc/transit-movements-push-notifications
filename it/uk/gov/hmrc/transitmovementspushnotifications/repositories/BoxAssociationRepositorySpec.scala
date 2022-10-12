@@ -31,6 +31,8 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
+
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -78,5 +80,23 @@ class BoxAssociationRepositorySpec
     }
 
     firstItem._id.value should be(boxAssociation._id.value)
+  }
+
+  "insert" should "add the given box  to the database" in {
+
+    val firstInsert = await(
+      repository.insert(boxAssociation).value
+    )
+
+    firstInsert should be(Right(()))
+
+    val secondInsert = await(
+      repository.insert(boxAssociation).value
+    )
+
+    secondInsert match {
+      case Left(UnexpectedError(Some(_))) =>
+      case _                              => fail("Excepted UnexpectedError")
+    }
   }
 }

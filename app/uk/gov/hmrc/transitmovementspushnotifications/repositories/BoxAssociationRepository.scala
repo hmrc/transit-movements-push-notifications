@@ -80,15 +80,20 @@ class BoxAssociationRepositoryImpl @Inject() (
   override def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit] =
     mongoRetry(Try(collection.insertOne(boxAssociation)) match {
       case Success(obs) =>
-        obs.toFuture().map {
-          result =>
-            if (result.wasAcknowledged()) {
-              Right(())
-            } else {
-              Left(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id.value}"))
-            }
-        }
-      case Failure(NonFatal(ex)) =>
+        obs
+          .toFuture()
+          .map {
+            result =>
+              if (result.wasAcknowledged()) {
+                Right(())
+              } else {
+                Left(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id.value}"))
+              }
+          }
+          .recover {
+            case NonFatal(ex) => Left(UnexpectedError(Some(ex)))
+          }
+      case Failure(ex) =>
         Future.successful(Left(UnexpectedError(Some(ex))))
     })
 

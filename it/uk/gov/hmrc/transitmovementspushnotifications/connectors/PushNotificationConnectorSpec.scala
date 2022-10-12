@@ -28,8 +28,11 @@ import org.scalatest.time.Span
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.NOT_FOUND
 import play.api.test.Helpers.OK
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.running
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
@@ -97,10 +100,15 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           val connector = app.injector.instanceOf[PushPullNotificationConnector]
           val result    = connector.getBox(clientId)
 
-          result.onComplete {
-            case Failure(e) => result mustEqual Future.failed(e)
-            case _          => fail("Future should have been Failure")
-          }
+          await(
+            result
+              .map {
+                _ => fail("This should not succeed")
+              }
+              .recover {
+                case UpstreamErrorResponse(_, NOT_FOUND, _, _) =>
+              }
+          )
         }
       }
 
@@ -118,10 +126,15 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           val connector = app.injector.instanceOf[PushPullNotificationConnector]
           val result    = connector.getBox(clientId)
 
-          result.onComplete {
-            case Failure(e) => result mustEqual Future.failed(e)
-            case _          => fail("Future should have been Failure")
-          }
+          await(
+            result
+              .map {
+                _ => fail("This should not succeed")
+              }
+              .recover {
+                case UpstreamErrorResponse(_, INTERNAL_SERVER_ERROR, _, _) =>
+              }
+          )
         }
       }
     }

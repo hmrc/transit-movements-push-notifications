@@ -27,8 +27,8 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.UnexpectedError
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -67,14 +67,15 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     }
 
     "when an upstream error is returned by the connector it returns a Left" in {
+      val exception = UpstreamErrorResponse("error", INTERNAL_SERVER_ERROR)
       when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(Future.failed(UpstreamErrorResponse("error", INTERNAL_SERVER_ERROR)))
+        .thenReturn(Future.failed(exception))
 
       val result = sut.getBoxId(boxAssociationRequestWithoutBoxId)
 
       whenReady(result.value) {
         r =>
-          r.isLeft mustBe true
+          r mustBe Left(UnexpectedError(Some(exception)))
       }
     }
 
@@ -86,7 +87,6 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
       whenReady(result.value) {
         r =>
-          r.isRight mustBe true
           r mustBe Right(boxResponse.boxId)
       }
     }
