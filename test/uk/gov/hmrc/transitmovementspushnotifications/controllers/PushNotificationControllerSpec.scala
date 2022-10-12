@@ -38,7 +38,6 @@ import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
@@ -48,7 +47,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
-
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 import java.time.OffsetDateTime
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -123,7 +122,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PresentationError.badRequestError(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
+        .thenReturn(EitherT.leftT(PushPullNotificationError.InvalidBoxId(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
 
       val request = fakeRequest(POST, validBody)
 
@@ -139,10 +138,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "must return BAD_REQUEST when clientId and boxId are not present in the body" in {
 
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PresentationError.badRequestError("Expected clientId to be present in the body")))
-
-      val request = fakeRequest(POST, validBody)
+      val request = fakeRequest(POST, Json.obj())
 
       val result =
         controller.createBoxAssociation(boxAssociation._id)(request)
@@ -157,7 +153,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return INTERNAL_SERVER_ERROR when there's an unexpected PPNS failure" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PresentationError.internalServiceError("Unexpected error")))
+        .thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
 
       val request = fakeRequest(POST, validBody)
 
@@ -167,7 +163,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe INTERNAL_SERVER_ERROR
       contentAsJson(result) mustBe Json.obj(
         "code"    -> "INTERNAL_SERVER_ERROR",
-        "message" -> "Unexpected error"
+        "message" -> "Internal server error"
       )
     }
 

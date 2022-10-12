@@ -26,7 +26,6 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
@@ -50,7 +49,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", None)
 
-  val boxAssociationRequestWithBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", Some(BoxId("Box_ABC")))
+  val boxAssociationRequestWithBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", Some(boxResponse.boxId))
 
   "getBoxId" - {
     "when given a payload with client id and no boxId it returns the default box id" in {
