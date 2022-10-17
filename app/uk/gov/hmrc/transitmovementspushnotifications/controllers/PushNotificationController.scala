@@ -26,6 +26,7 @@ import play.api.mvc.Result
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
@@ -47,6 +48,8 @@ class PushNotificationController @Inject() (
   ec: ExecutionContext
 ) extends BackendController(cc)
     with ConvertError {
+
+  def postNotification(movementId: MovementId, messageId: MessageId): Action[JsValue] = ???
 
   def createBoxAssociation(movementId: MovementId): Action[JsValue] = Action.async(parse.json) {
     implicit request =>
