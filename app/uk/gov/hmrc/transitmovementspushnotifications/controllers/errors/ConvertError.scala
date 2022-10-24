@@ -57,8 +57,13 @@ trait ConvertError {
     import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
     def convert(headerExtractError: PushPullNotificationError): PresentationError = headerExtractError match {
-      case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId(msg)   => PresentationError.badRequestError(message = msg)
+      case UnexpectedError(ex)        => PresentationError.internalServerError(cause = ex)
+      case InvalidBoxId(msg)          => PresentationError.badRequestError(message = msg)
+      case BadRequest(msg)            => PresentationError.badRequestError(message = msg)
+      case RequestTooLarge(msg)       => PresentationError.badRequestError(message = msg)
+      case InvalidRequestPayload(msg) => PresentationError.badRequestError(message = msg)
+      case Forbidden(msg)             => PresentationError.forbiddenError(message = msg)
+      case BoxNotFound(msg)           => PresentationError.notFoundError(message = msg)
     }
   }
 

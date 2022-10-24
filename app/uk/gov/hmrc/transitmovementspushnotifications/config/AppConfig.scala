@@ -30,4 +30,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
   lazy val mongoRetryAttempts: Int = config.get[Int]("mongodb.retryAttempts")
   lazy val documentTtl: Long       = config.get[Long]("mongodb.timeToLiveInSeconds")
 
+  lazy val maxPushPullPayloadSize: Int = config.get[Int]("pushPullNotificationServiceMessageLimit")
+
 }

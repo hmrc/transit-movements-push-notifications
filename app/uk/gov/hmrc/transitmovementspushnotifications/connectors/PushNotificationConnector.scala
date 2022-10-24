@@ -16,19 +16,28 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.google.inject.ImplementedBy
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import com.google.inject.Inject
+import play.api.http.HeaderNames
+import play.api.http.MimeTypes
+import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.Status.OK
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[PushPullNotificationConnectorImpl])
 trait PushPullNotificationConnector {
@@ -42,6 +51,12 @@ trait PushPullNotificationConnector {
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Seq[BoxResponse]]
+
+  def postNotification(boxId: BoxId, notificationMessage: MessageNotification, source: Source[ByteString, _])(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, Unit]]
+
 }
 
 class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2) extends PushPullNotificationConnector with BaseConnector {
@@ -79,6 +94,27 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
             case _  => response.error
           }
       }
-
   }
+
+  override def postNotification(boxId: BoxId, notificationMessage: MessageNotification, source: Source[ByteString, _])(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, Unit]] = {
+
+    val url = appConfig.pushPullUrl.withPath(getNotificationsRoute(boxId.value))
+
+    httpClientV2
+      .post(url"$url")
+      .addHeaders(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)
+      .withBody(source)
+      .execute[Either[UpstreamErrorResponse, HttpResponse]]
+      .map {
+        case Right(_)    => Right(())
+        case Left(error) => Left(error)
+      }
+      .recover {
+        case NonFatal(ex) => Left(UpstreamErrorResponse(ex.getMessage, INTERNAL_SERVER_ERROR))
+      }
+  }
+
 }

@@ -21,4 +21,9 @@ sealed abstract class PushPullNotificationError
 object PushPullNotificationError {
   case class UnexpectedError(thr: Option[Throwable] = None) extends PushPullNotificationError
   case class InvalidBoxId(message: String)                  extends PushPullNotificationError
+  case class BadRequest(message: String)                    extends PushPullNotificationError
+  case class InvalidRequestPayload(message: String)         extends PushPullNotificationError
+  case class Forbidden(message: String)                     extends PushPullNotificationError
+  case class BoxNotFound(message: String)                   extends PushPullNotificationError
+  case class RequestTooLarge(message: String)               extends PushPullNotificationError
 }
