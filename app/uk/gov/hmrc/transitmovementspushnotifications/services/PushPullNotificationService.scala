@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT

@@ -100,6 +100,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     httpClientV2
       .post(url"$url")
       .addHeaders(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
+      .addHeaders(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)
       .withBody(notificationMessage)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
       .map {
