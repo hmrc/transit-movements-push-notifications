@@ -56,9 +56,10 @@ trait ModelGenerators extends BaseGenerators {
   implicit lazy val arbitraryBoxAssociationRequest: Arbitrary[BoxAssociationRequest] =
     Arbitrary {
       for {
-        clientId <- arbitrary[String]
-        boxId    <- arbitrary[Option[BoxId]]
-      } yield BoxAssociationRequest(clientId, boxId)
+        clientId     <- arbitrary[String]
+        movementType <- arbitrary[String]
+        boxId        <- arbitrary[Option[BoxId]]
+      } yield BoxAssociationRequest(clientId, movementType, boxId)
     }
 
   implicit lazy val arbitraryBoxResponse: Arbitrary[BoxResponse] =
@@ -71,10 +72,11 @@ trait ModelGenerators extends BaseGenerators {
   implicit lazy val arbitraryBoxAssociation: Arbitrary[BoxAssociation] =
     Arbitrary {
       for {
-        movementId <- arbitrary[MovementId]
-        boxId      <- arbitrary[BoxId]
-        updated    <- arbitrary[OffsetDateTime]
-      } yield BoxAssociation(movementId, boxId, updated)
+        movementId   <- arbitrary[MovementId]
+        boxId        <- arbitrary[BoxId]
+        movementType <- arbitrary[String]
+        updated      <- arbitrary[OffsetDateTime]
+      } yield BoxAssociation(movementId, boxId, movementType, updated)
     }
 
 }

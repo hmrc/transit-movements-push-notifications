@@ -53,7 +53,8 @@ class PushNotificationController @Inject() (
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
         boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
-        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId)
+        _                      = println("@@@@@@")
+        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),

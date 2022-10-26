@@ -49,8 +49,8 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     boxAssociationRequest match {
-      case BoxAssociationRequest(_, Some(boxId)) => checkBoxIdExists(boxId)
-      case BoxAssociationRequest(clientId, None) => getDefaultBoxId(clientId)
+      case BoxAssociationRequest(_, _, Some(boxId)) => checkBoxIdExists(boxId)
+      case BoxAssociationRequest(clientId, _, None) => getDefaultBoxId(clientId)
     }
 
   private def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =

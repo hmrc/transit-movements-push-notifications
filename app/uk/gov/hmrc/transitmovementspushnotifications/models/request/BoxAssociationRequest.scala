@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
 
-case class BoxAssociationRequest(clientId: String, boxId: Option[BoxId])
+case class BoxAssociationRequest(clientId: String, movementType: String, boxId: Option[BoxId])
 
 object BoxAssociationRequest extends CommonFormats {
   implicit val boxFormat = Json.format[BoxAssociationRequest]

@@ -56,7 +56,7 @@ trait ConvertError {
   implicit val ppnsErrorConverter = new Converter[PushPullNotificationError] {
     import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
-    def convert(headerExtractError: PushPullNotificationError): PresentationError = headerExtractError match {
+    def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
       case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
       case InvalidBoxId(msg)   => PresentationError.badRequestError(message = msg)
     }

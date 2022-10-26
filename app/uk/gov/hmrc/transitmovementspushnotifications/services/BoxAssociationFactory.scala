@@ -27,7 +27,7 @@ import javax.inject.Inject
 
 @ImplementedBy(classOf[BoxAssociationFactoryImpl])
 trait BoxAssociationFactory {
-  def create(boxId: BoxId, movementId: MovementId): BoxAssociation
+  def create(boxId: BoxId, movementId: MovementId, movementType: String): BoxAssociation
 }
 
 class BoxAssociationFactoryImpl @Inject() (
@@ -36,11 +36,13 @@ class BoxAssociationFactoryImpl @Inject() (
 
   def create(
     boxId: BoxId,
-    movementId: MovementId
+    movementId: MovementId,
+    movementType: String
   ): BoxAssociation =
     BoxAssociation(
       _id = movementId,
       boxId = boxId,
+      movementType = movementType,
       updated = OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC)
     )
 

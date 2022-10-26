@@ -97,7 +97,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   "createBoxAssociation" - {
 
     val validBody: JsValue = Json.obj(
-      "clientId" -> boxAssociationRequest.clientId
+      "clientId"     -> boxAssociationRequest.clientId,
+      "movementType" -> "arrivals"
     )
 
     "must return Created if successfully inserts box association" in {
@@ -105,7 +106,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId]))
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
         .thenReturn(boxAssociation)
 
       when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
@@ -172,7 +173,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId]))
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
         .thenReturn(boxAssociation)
 
       when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))

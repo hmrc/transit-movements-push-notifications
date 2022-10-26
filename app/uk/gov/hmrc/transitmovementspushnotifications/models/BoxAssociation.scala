@@ -21,7 +21,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormat
 
 import java.time.OffsetDateTime
 
-case class BoxAssociation(_id: MovementId, boxId: BoxId, updated: OffsetDateTime)
+case class BoxAssociation(_id: MovementId, boxId: BoxId, movementType: String, updated: OffsetDateTime)
 
 object BoxAssociation extends CommonFormats {
   implicit val boxAssociationFormat = Json.format[BoxAssociation]

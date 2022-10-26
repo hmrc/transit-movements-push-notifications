@@ -47,9 +47,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val emptyBody: JsValue = Json.obj()
 
-  val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", None)
+  val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", "arrivals", None)
 
-  val boxAssociationRequestWithBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", Some(boxResponse.boxId))
+  val boxAssociationRequestWithBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", "arrivals", Some(boxResponse.boxId))
 
   "getBoxId" - {
     "when given a payload with client id and no boxId it returns the default box id" in {
