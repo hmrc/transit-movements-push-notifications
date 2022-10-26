@@ -29,6 +29,7 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
 import scala.concurrent._
@@ -47,7 +48,7 @@ trait PushPullNotificationConnector {
     hc: HeaderCarrier
   ): Future[Seq[BoxResponse]]
 
-  def postNotification(boxId: BoxId, notificationMessage: Source[ByteString, _])(implicit
+  def postNotification(boxId: BoxId, messageNotification: MessageNotification)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, Unit]]
@@ -91,16 +92,17 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
       }
   }
 
-  override def postNotification(boxId: BoxId, notificationMessage: Source[ByteString, _])(implicit
+  override def postNotification(boxId: BoxId, messageNotification: MessageNotification)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, Unit]] = {
+
     val url = appConfig.pushPullUrl.withPath(getNotificationsRoute(boxId.value))
 
     httpClientV2
       .post(url"$url")
       .addHeaders(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-      .withBody(notificationMessage)
+      .withBody(messageNotification)
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
       .map {
         case Right(_)    => Right(())

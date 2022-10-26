@@ -16,15 +16,21 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
+import akka.http.javadsl.model.headers.ContentLength
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
+import cats.data.OptionT
 import com.google.inject.ImplementedBy
 import play.api.http.Status._
 import play.api.libs.json.JsString
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
+import play.api.mvc.Result
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
@@ -36,7 +42,10 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNot
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import javax.inject._
+import scala.concurrent.Future
 import scala.concurrent._
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[PushPullNotificationServiceImpl])
@@ -105,62 +114,56 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     body: Source[ByteString, _]
   )(implicit
     ec: ExecutionContext,
-    hc: HeaderCarrier
-  ): EitherT[Future, PushPullNotificationError, Unit] =
-    EitherT(
-      pushPullNotificationConnector
-        .postNotification(
-          boxId.get, // <-- TODO (remove)
-          buildMessageNotification(
-            contentLength,
-            movementId,
-            messageId,
-            body
-          )
-        )
-        .map {
-          case Right(_) => Right((): Unit)
-          case Left(error) =>
-            error.statusCode match {
-              case NOT_FOUND                                          => Left(BoxNotFound("Box does not exist"))
-              case BAD_REQUEST | FORBIDDEN | REQUEST_ENTITY_TOO_LARGE => Left(BadRequest("Bad Request"))
-              case ex @ _                                             => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
-            }
+    hc: HeaderCarrier,
+    mat: Materializer
+  ): EitherT[Future, PushPullNotificationError, Unit] = {
+
+    val result: OptionT[Future, Future[Either[PushPullNotificationError, Unit]]] = for {
+      id <- OptionT.fromOption[Future](boxId)
+      uri = buildUriAsStream(movementId, messageId)
+      payload <- determinePayload(contentLength, body)
+      messageNotification = MessageNotification(uri, Some(payload))
+      post                = pushPullNotificationConnector.postNotification(id, messageNotification)
+    } yield post.map {
+      case Right(_) => Right((): Unit)
+      case Left(error) =>
+        error.statusCode match {
+          case NOT_FOUND                                          => Left(BoxNotFound("Box does not exist"))
+          case BAD_REQUEST | FORBIDDEN | REQUEST_ENTITY_TOO_LARGE => Left(BadRequest("Bad Request"))
+          case ex @ _                                             => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
         }
-    )
-
-  private def buildMessageNotification(
-    contentLength: Option[String],
-    movementId: MovementId,
-    messageId: MessageId,
-    body: Source[ByteString, _]
-  ): Source[ByteString, _] = {
-
-    val payloadExceedsLimit = {
-      val maybeSize: Option[Int] = contentLength.flatMap(
-        str => str.toIntOption
-      )
-      if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
     }
-
-    if (payloadExceedsLimit)
-      buildUriAsStream(movementId, messageId)
-    else
-      body
+    result // !!! TODO WRONG Return type!!!
   }
 
-  private def buildUriAsStream(movementId: MovementId, messageId: MessageId) = {
-    val uriWrites = new Writes[URI] {
-      override def writes(o: URI) = Json.obj(
-        "messageURI" -> JsString(o.toString)
-      )
+  def determinePayload(contentLength: Option[String], body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer): OptionT[Future, String] =
+    if (payloadExceedsLimit(contentLength)) {
+      val noPayload: OptionT[Future, String] = OptionT.none
+      noPayload
+    } else {
+      val payload = OptionT.liftF(bodyToString(body))
+      payload
     }
 
-    val uri = new URI(
+  def payloadExceedsLimit(contentLength: Option[String]): Boolean = {
+    val maybeSize: Option[Int] = contentLength.flatMap(
+      str => str.toIntOption
+    )
+    if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
+  }
+
+  def buildUriAsStream(movementId: MovementId, messageId: MessageId): String =
+    (new URI(
       s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}"
-    )
-    val uriAsJson = uriWrites.writes(uri).toString()
-    Source.single(ByteString(uriAsJson, StandardCharsets.UTF_8))
-  }
+    )).toString
+
+  def maybeBody(contentLength: Option[String], body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer) =
+    if (payloadExceedsLimit(contentLength)) Future.successful("") else bodyToString(body)
+
+  def bodyToString(body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer): Future[String] =
+    body
+      .reduce(_ ++ _)
+      .map(_.utf8String)
+      .runWith(Sink.head)
 
 }
