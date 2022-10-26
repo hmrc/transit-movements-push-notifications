@@ -16,36 +16,29 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
 import com.google.inject.ImplementedBy
-import play.api.http.Status.BAD_REQUEST
-import play.api.http.Status.FORBIDDEN
-import play.api.http.Status.NOT_FOUND
-import play.api.http.Status.REQUEST_ENTITY_TOO_LARGE
+import play.api.http.Status._
+import play.api.libs.json.JsString
+import play.api.libs.json.Json
+import play.api.libs.json.Writes
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BadRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BoxNotFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.Forbidden
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.RequestTooLarge
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
 import java.net.URI
-import javax.inject.Inject
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.util.Try
+import java.nio.charset.StandardCharsets
+import javax.inject._
+import scala.concurrent._
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[PushPullNotificationServiceImpl])
@@ -115,59 +108,61 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
-  ): EitherT[Future, PushPullNotificationError, Unit] = {
-
-    val messageNotification = getMessageNotification(
-      contentLength: Option[String],
-      movementId: MovementId,
-      messageId: MessageId,
-      body: Source[ByteString, _]
-    )
-
+  ): EitherT[Future, PushPullNotificationError, Unit] =
     EitherT(
       pushPullNotificationConnector
-        .postNotification(boxId.get, messageNotification, body)
+        .postNotification(
+          boxId.get, // <-- TODO (remove)
+          buildMessageNotification(
+            contentLength,
+            movementId,
+            messageId,
+            body
+          )
+        )
         .map {
           case Right(_) => Right((): Unit)
           case Left(error) =>
             error.statusCode match {
-              case BAD_REQUEST              => Left(BadRequest("Box ID is not a UUID / Request body does not match the Content-Type header"))
-              case FORBIDDEN                => Left(Forbidden("Access denied, service is not allowlisted"))
-              case NOT_FOUND                => Left(BoxNotFound("Box does not exist"))
-              case REQUEST_ENTITY_TOO_LARGE => Left(RequestTooLarge("Request is too large"))
-              case ex @ _                   => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
+              case NOT_FOUND                                          => Left(BoxNotFound("Box does not exist"))
+              case BAD_REQUEST | FORBIDDEN | REQUEST_ENTITY_TOO_LARGE => Left(BadRequest("Bad Request"))
+              case ex @ _                                             => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
             }
         }
     )
-  }
 
-  private def getMessageNotification(
+  private def buildMessageNotification(
     contentLength: Option[String],
     movementId: MovementId,
     messageId: MessageId,
     body: Source[ByteString, _]
-  ): MessageNotification = {
+  ): Source[ByteString, _] = {
 
-    val payloadExceedsLimit: Boolean = {
+    val payloadExceedsLimit = {
       val maybeSize: Option[Int] = contentLength.flatMap(
         str => str.toIntOption
       )
       if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
     }
 
-    val uri =
-      if (payloadExceedsLimit)
-        Some(
-          new URI(
-            s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}"
-          )
-        )
-      else None
+    if (payloadExceedsLimit)
+      buildUriAsStream(movementId, messageId)
+    else
+      body
+  }
 
-    MessageNotification(
-      uri = uri,
-      messageBody = if (payloadExceedsLimit) None else Some(body)
+  private def buildUriAsStream(movementId: MovementId, messageId: MessageId) = {
+    val uriWrites = new Writes[URI] {
+      override def writes(o: URI) = Json.obj(
+        "messageURI" -> JsString(o.toString)
+      )
+    }
+
+    val uri = new URI(
+      s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}"
     )
+    val uriAsJson = uriWrites.writes(uri).toString()
+    Source.single(ByteString(uriAsJson, StandardCharsets.UTF_8))
   }
 
 }

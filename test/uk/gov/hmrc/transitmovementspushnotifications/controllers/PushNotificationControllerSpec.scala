@@ -231,7 +231,13 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       when(
         mockPushPullNotificationService
-          .sendPushNotification(any[String].asInstanceOf[Option[BoxId]], any[Option[String]], any[Source[ByteString, _]]())(
+          .sendPushNotification(
+            any[String].asInstanceOf[Option[BoxId]],
+            any[Option[String]],
+            any[String].asInstanceOf[MovementId],
+            any[String].asInstanceOf[MessageId],
+            any[Source[ByteString, _]]()
+          )(
             any[ExecutionContext],
             any[HeaderCarrier]
           )
@@ -250,7 +256,13 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       when(
         mockPushPullNotificationService
-          .sendPushNotification(any[String].asInstanceOf[Option[BoxId]], any[Option[String]], any[Source[ByteString, _]]())(
+          .sendPushNotification(
+            any[String].asInstanceOf[Option[BoxId]],
+            any[Option[String]],
+            any[String].asInstanceOf[MovementId],
+            any[String].asInstanceOf[MessageId],
+            any[Source[ByteString, _]]()
+          )(
             any[ExecutionContext],
             any[HeaderCarrier]
           )

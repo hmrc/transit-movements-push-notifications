@@ -18,44 +18,31 @@ package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.get
-import com.github.tomakehurst.wiremock.client.WireMock.post
-import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
-import org.scalacheck.Gen
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.OptionValues
+import org.scalatest.durations
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.time.Millis
-import org.scalatest.time.Seconds
-import org.scalatest.time.Span
-import play.api.http.Status
+import org.scalatest.time._
 import play.api.test.Helpers.BAD_REQUEST
 import play.api.test.Helpers.FORBIDDEN
-import play.api.test.Helpers.CREATED
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.NOT_FOUND
 import play.api.test.Helpers.OK
+import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.running
+import play.api.test.Helpers.status
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BadRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BoxNotFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.Forbidden
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.RequestTooLarge
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import scala.util.Failure
 
 class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with ScalaFutures with GuiceWiremockSuite with ModelGenerators with OptionValues {
   override protected def portConfigKey: Seq[String] = Seq("microservice.services.push-pull-notifications-api.port")
@@ -154,10 +141,11 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
       }
     }
 
-    "postNotification" - new Setup {
+    "postNotification" - {
 
       val boxId                          = arbitraryBoxId.arbitrary.sample.value
-      val payload: Source[ByteString, _] = Source.single(ByteString.fromString("<CC007C>data</CC007C>"))
+      val payload: Source[ByteString, _] = Source.single(ByteString.fromString("""{"message":"<CC007C>data</CC007C>"}"""))
+      val pushPullNotificationErrors     = List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE)
 
       "should return unit when the post is successful" in {
         server.stubFor {
@@ -179,35 +167,25 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
         }
       }
 
-      for (reply <- apiReplies)
-        s"should return a ${reply._2} when a the ${reply._1} is returned" in {
+      for (error <- pushPullNotificationErrors)
+        s"should return an UpstreamErrorResponse for the given returned $error" in {
           server.stubFor {
             post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
               aResponse()
-                .withStatus(reply._1)
+                .withStatus(error)
             )
           }
 
           val app = applicationBuilder.build()
           running(app) {
-
             val connector = app.injector.instanceOf[PushPullNotificationConnector]
             whenReady(connector.postNotification(boxId, payload)) {
               result =>
-                result mustEqual Left(reply._2)
+                result.left.get.statusCode mustEqual error
             }
-
           }
         }
     }
 
-    trait Setup {
-      val apiReplies = Map[Int, PushPullNotificationError](
-        BAD_REQUEST -> BadRequest("Box ID is not a UUID / Request body does not match the Content-Type header"),
-        403         -> Forbidden("Access denied, service is not allowlisted"),
-        404         -> BoxNotFound("Box does not exist"),
-        413         -> RequestTooLarge("Request is too large")
-      )
-    }
   }
 }

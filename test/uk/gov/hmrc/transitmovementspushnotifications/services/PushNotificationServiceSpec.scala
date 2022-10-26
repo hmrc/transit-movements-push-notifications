@@ -25,6 +25,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
+import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
@@ -39,11 +40,12 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
   val boxResponse = arbitraryBoxResponse.arbitrary.sample.get
 
   val mockPushPullNotificationConnector = mock[PushPullNotificationConnector]
+  private val mockAppConfig             = mock[AppConfig]
 
   implicit val ec: ExecutionContext = materializer.executionContext
   implicit val hc: HeaderCarrier    = HeaderCarrier()
 
-  val sut = new PushPullNotificationServiceImpl(mockPushPullNotificationConnector)
+  val sut = new PushPullNotificationServiceImpl(mockPushPullNotificationConnector, mockAppConfig)
 
   val emptyBody: JsValue = Json.obj()
 
