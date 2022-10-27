@@ -37,7 +37,7 @@ class BoxAssociationFactorySpec extends SpecBase with ModelGenerators {
       val boxId      = arbitraryBoxId.arbitrary.sample.get
       val movementId = arbitraryMovementId.arbitrary.sample.get
 
-      val boxAssociation = sut.create(boxId, movementId, "arrivals")
+      val boxAssociation = sut.create(boxId, movementId, "arrival")
 
       boxAssociation._id.value mustBe movementId.value
     }
