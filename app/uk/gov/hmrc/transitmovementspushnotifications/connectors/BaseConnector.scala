@@ -16,20 +16,15 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import io.lemonlabs.uri.QueryString
-import io.lemonlabs.uri.Url
 import io.lemonlabs.uri.UrlPath
 import play.api.libs.json.JsResult
 import play.api.libs.json.Reads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 
 import scala.concurrent.Future
 
 trait BaseConnector {
-
-  val getAllBoxesRoute = UrlPath.parse("/cmb/box")
 
   val getBoxRoute = UrlPath.parse("/box")
 

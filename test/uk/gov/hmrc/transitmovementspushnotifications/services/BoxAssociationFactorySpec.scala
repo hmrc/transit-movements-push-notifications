@@ -30,16 +30,31 @@ class BoxAssociationFactorySpec extends SpecBase with ModelGenerators {
   val clock: Clock            = Clock.fixed(instant.toInstant, ZoneOffset.UTC)
   val random                  = new SecureRandom
 
-  "create" - {
+  "create box association for arrival" - {
     val sut = new BoxAssociationFactoryImpl(clock)
 
-    "will create a box association with _id equal to the movementId supplied" in {
+    "will create a box association with _id equal to the movementId supplied for arrival" in {
       val boxId      = arbitraryBoxId.arbitrary.sample.get
       val movementId = arbitraryMovementId.arbitrary.sample.get
 
       val boxAssociation = sut.create(boxId, movementId, "arrival")
 
       boxAssociation._id.value mustBe movementId.value
+      boxAssociation.movementType mustBe "arrival"
+    }
+  }
+
+  "create box association for departure" - {
+    val sut = new BoxAssociationFactoryImpl(clock)
+
+    "will create a box association with _id equal to the movementId supplied for departure" in {
+      val boxId      = arbitraryBoxId.arbitrary.sample.get
+      val movementId = arbitraryMovementId.arbitrary.sample.get
+
+      val boxAssociation = sut.create(boxId, movementId, "departure")
+
+      boxAssociation._id.value mustBe movementId.value
+      boxAssociation.movementType mustBe "departure"
     }
   }
 

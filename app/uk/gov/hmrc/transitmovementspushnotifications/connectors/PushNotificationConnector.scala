@@ -69,7 +69,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
 
   override def getAllBoxes(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Seq[BoxResponse]] = {
 
-    val url = appConfig.pushPullUrl.withPath(getAllBoxesRoute)
+    val url = appConfig.pushPullUrl.withPath(getBoxRoute)
 
     httpClientV2
       .get(url"$url")

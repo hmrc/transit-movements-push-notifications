@@ -16,25 +16,21 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
-import akka.util.Timeout
 import cats.syntax.all._
 import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
 import org.scalatest.time.Span
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.MovementTypeError.InvalidMovementType
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
-
-import scala.concurrent.duration.DurationInt
 
 class ConvertErrorSpec extends SpecBase {
 

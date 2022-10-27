@@ -27,7 +27,10 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
+import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.UnexpectedError
 
 import scala.concurrent.ExecutionContext
@@ -35,8 +38,9 @@ import scala.concurrent.Future
 
 class PushNotificationServiceSpec extends SpecBase with ModelGenerators with TestActorSystem {
 
-  val clientId    = "clientId"
-  val boxResponse = arbitraryBoxResponse.arbitrary.sample.get
+  val clientId        = "clientId"
+  val boxResponse     = arbitraryBoxResponse.arbitrary.sample.get
+  var boxResponseList = Seq(BoxResponse(BoxId("123")), BoxResponse(BoxId("456")))
 
   val mockPushPullNotificationConnector = mock[PushPullNotificationConnector]
 
@@ -49,7 +53,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", "arrival", None)
 
-  val boxAssociationRequestWithBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", "arrival", Some(boxResponse.boxId))
+  val boxAssociationRequestWithBoxId: BoxAssociationRequest        = BoxAssociationRequest("ID_456", "arrival", Some(BoxId("123")))
+  val boxAssociationRequestWithInvalidBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", "arrival", Some(BoxId("111")))
 
   "getBoxId" - {
     "when given a payload with client id and no boxId it returns the default box id" in {
@@ -81,13 +86,25 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
     "when given a payload with a valid box id it returns the given box id" in {
       when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(Future.successful(Seq(boxResponse)))
+        .thenReturn(Future.successful(boxResponseList))
 
       val result = sut.getBoxId(boxAssociationRequestWithBoxId)
 
       whenReady(result.value) {
         r =>
-          r mustBe Right(boxResponse.boxId)
+          r mustBe Right(BoxId("123"))
+      }
+    }
+
+    "when given a payload with a invalid box id it should return InvalidBoxId" in {
+      when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(Future.successful(boxResponseList))
+
+      val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
+
+      whenReady(result.value) {
+        r =>
+          r mustBe Left(PushPullNotificationError.InvalidBoxId("Box id provided does not exist: BoxId(111)"))
       }
     }
 
