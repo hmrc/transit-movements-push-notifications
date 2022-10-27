@@ -17,8 +17,13 @@
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.MovementTypeError.InvalidMovementType
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -36,17 +41,15 @@ trait ConvertError {
   }
 
   implicit val mongoErrorConverter = new Converter[MongoError] {
-    import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 
     def convert(mongoError: MongoError): PresentationError = mongoError match {
-      case UnexpectedError(ex)            => PresentationError.internalServerError(cause = ex)
+      case MongoError.UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
       case InsertNotAcknowledged(message) => PresentationError.internalServerError(message = message)
       case DocumentNotFound(message)      => PresentationError.notFoundError(message = message)
     }
   }
 
   implicit val headerExtractErrorConverter = new Converter[HeaderExtractError] {
-    import HeaderExtractError._
 
     def convert(headerExtractError: HeaderExtractError): PresentationError = headerExtractError match {
       case NoHeaderFound(message) => PresentationError.badRequestError(message)
@@ -54,11 +57,17 @@ trait ConvertError {
   }
 
   implicit val ppnsErrorConverter = new Converter[PushPullNotificationError] {
-    import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
     def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
-      case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId(msg)   => PresentationError.badRequestError(message = msg)
+      case PushPullNotificationError.UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
+      case InvalidBoxId(msg)                             => PresentationError.badRequestError(message = msg)
+    }
+  }
+
+  implicit val movementTypeErrorConverter = new Converter[MovementTypeError] {
+
+    def convert(movementTypeError: MovementTypeError): PresentationError = movementTypeError match {
+      case InvalidMovementType(movementType) => PresentationError.badRequestError(s"$movementType is not a valid movement type")
     }
   }
 

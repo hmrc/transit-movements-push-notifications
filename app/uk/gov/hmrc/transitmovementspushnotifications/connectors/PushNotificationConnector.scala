@@ -22,8 +22,10 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.client.HttpClientV2
 import com.google.inject.Inject
+import io.lemonlabs.uri.QueryString
 import play.api.http.Status.OK
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -51,7 +53,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val url = appConfig.pushPullUrl.withPath(getBoxRoute(clientId))
+    val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId)))
 
     httpClientV2
       .get(url"$url")

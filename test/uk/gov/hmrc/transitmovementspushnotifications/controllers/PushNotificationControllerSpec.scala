@@ -98,7 +98,16 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     val validBody: JsValue = Json.obj(
       "clientId"     -> boxAssociationRequest.clientId,
-      "movementType" -> "arrivals"
+      "movementType" -> "arrival"
+    )
+
+    val invalidMovementTypeBody: JsValue = Json.obj(
+      "clientId"     -> boxAssociationRequest.clientId,
+      "movementType" -> "abc"
+    )
+
+    val invalidBodyWithoutClientId: JsValue = Json.obj(
+      "movementType" -> "arrival"
     )
 
     "must return Created if successfully inserts box association" in {
@@ -120,6 +129,52 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe CREATED
     }
 
+    "must return BAD_REQUEST when invalid movementType provided in body" in {
+
+      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(EitherT.rightT(boxId))
+
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
+        .thenReturn(boxAssociation)
+
+      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
+        .thenReturn(EitherT.rightT(Right(())))
+
+      val request = fakeRequest(POST, invalidMovementTypeBody)
+
+      val result =
+        controller.createBoxAssociation(boxAssociation._id)(request)
+
+      status(result) mustBe BAD_REQUEST
+      contentAsJson(result) mustBe Json.obj(
+        "code"    -> "BAD_REQUEST",
+        "message" -> "abc is not a valid movement type"
+      )
+    }
+
+    "must return BAD_REQUEST when clientId or movementType or both are missing in body" in {
+
+      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(EitherT.rightT(boxId))
+
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
+        .thenReturn(boxAssociation)
+
+      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
+        .thenReturn(EitherT.rightT(Right(())))
+
+      val request = fakeRequest(POST, invalidBodyWithoutClientId)
+
+      val result =
+        controller.createBoxAssociation(boxAssociation._id)(request)
+
+      status(result) mustBe BAD_REQUEST
+      contentAsJson(result) mustBe Json.obj(
+        "code"    -> "BAD_REQUEST",
+        "message" -> "Expected clientId and movementType to be present in the body"
+      )
+    }
+
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
@@ -137,7 +192,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       )
     }
 
-    "must return BAD_REQUEST when clientId and boxId are not present in the body" in {
+    "must return BAD_REQUEST when clientId, movementType and boxId are not present in the body" in {
 
       val request = fakeRequest(POST, Json.obj())
 
@@ -147,7 +202,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe BAD_REQUEST
       contentAsJson(result) mustBe Json.obj(
         "code"    -> "BAD_REQUEST",
-        "message" -> "Expected clientId to be present in the body"
+        "message" -> "Expected clientId and movementType to be present in the body"
       )
     }
 

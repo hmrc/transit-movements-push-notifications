@@ -25,6 +25,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.MovementTypeError.InvalidMovementType
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -106,6 +107,23 @@ class ConvertErrorSpec extends SpecBase {
           whenReady(input.asPresentation.value) {
             _ mustBe Left(ppnsAndPresentationError._2)
           }
+      }
+    }
+  }
+
+  "MovementType error" - {
+
+    "for a success" in {
+      val input = Right[MovementTypeError, Unit](()).toEitherT[Future]
+      whenReady(input.asPresentation.value) {
+        _ mustBe Right(())
+      }
+    }
+
+    "for a failure" in {
+      val input = Left[MovementTypeError, Unit](InvalidMovementType("abc")).toEitherT[Future]
+      whenReady(input.asPresentation.value) {
+        _ mustBe Left(StandardError("abc is not a valid movement type", ErrorCode.BadRequest))
       }
     }
   }
