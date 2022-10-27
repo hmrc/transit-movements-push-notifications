@@ -16,11 +16,8 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.OptionValues
-import org.scalatest.durations
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -34,11 +31,11 @@ import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.running
-import play.api.test.Helpers.status
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
@@ -143,9 +140,16 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
 
     "postNotification" - {
 
-      val boxId                          = arbitraryBoxId.arbitrary.sample.value
-      val payload: Source[ByteString, _] = Source.single(ByteString.fromString("""{"message":"<CC007C>data</CC007C>"}"""))
-      val pushPullNotificationErrors     = List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE)
+      val boxId        = arbitraryBoxId.arbitrary.sample.value
+      val validPayload = """{"message":"<CC007C>data</CC007C>"}"""
+      val messageNotification = MessageNotification(
+        messageUri = "http://www.gov.uk/",
+        messageBody = Some(validPayload)
+      )
+
+      val messageId = arbitraryMessageId
+
+      val pushPullNotificationErrors = List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE)
 
       "should return unit when the post is successful" in {
         server.stubFor {
@@ -159,7 +163,7 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
         running(app) {
 
           val connector = app.injector.instanceOf[PushPullNotificationConnector]
-          whenReady(connector.postNotification(boxId, payload)) {
+          whenReady(connector.postNotification(boxId, messageNotification)) {
             result =>
               result mustEqual Right((): Unit)
           }
@@ -179,7 +183,7 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           val app = applicationBuilder.build()
           running(app) {
             val connector = app.injector.instanceOf[PushPullNotificationConnector]
-            whenReady(connector.postNotification(boxId, payload)) {
+            whenReady(connector.postNotification(boxId, messageNotification)) {
               result =>
                 result.left.get.statusCode mustEqual error
             }

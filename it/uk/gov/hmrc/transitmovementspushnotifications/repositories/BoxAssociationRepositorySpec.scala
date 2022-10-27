@@ -121,7 +121,7 @@ class BoxAssociationRepositorySpec
       repository.getBoxId(boxAssociation._id, clock).value
     )
 
-    result should be(Right(Some(boxAssociation.boxId)))
+    result should be(Right(boxAssociation.boxId))
   }
 
   "getBoxId" should "return a DocumentNotFound error for a movementId that is not in the database" in {
