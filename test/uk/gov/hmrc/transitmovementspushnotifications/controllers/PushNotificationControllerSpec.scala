@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.util.Timeout
@@ -54,7 +55,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificati
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BoxNotFound
 
 import java.nio.charset.StandardCharsets
 import java.time.Clock
@@ -63,7 +63,6 @@ import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.xml.NodeSeq
 
 class PushNotificationControllerSpec extends SpecBase with ModelGenerators with TestActorSystem {
 
@@ -81,7 +80,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   lazy val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get.copy(boxId = boxAssociationRequest.boxId.value)
 
-  lazy val boxId: BoxId = boxAssociationRequest.boxId.value
+  lazy val boxId: BoxId           = boxAssociationRequest.boxId.value
+  lazy val movementId: MovementId = arbitraryMovementId.arbitrary.sample.value
+  lazy val messageId: MessageId   = MessageId("message-id-1")
 
   def fakeRequest[A](
     method: String,
@@ -216,8 +217,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       method = POST,
       uri = routes.PushNotificationController
         .postNotification(
-          MovementId("movement-1"),
-          MessageId("messageId-1")
+          movementId,
+          messageId
         )
         .url,
       headers = FakeHeaders(),
@@ -227,24 +228,25 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return Unit if message less than 80kB is successfully posted" in {
 
       when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId], any[Clock]))
-        .thenReturn(EitherT.rightT(Some(BoxId("box-id-1")))) // boxId
+        .thenReturn(EitherT.rightT(boxId))
 
       when(
         mockPushPullNotificationService
           .sendPushNotification(
-            any[String].asInstanceOf[Option[BoxId]],
+            any[String].asInstanceOf[BoxId],
             any[Option[String]],
             any[String].asInstanceOf[MovementId],
             any[String].asInstanceOf[MessageId],
             any[Source[ByteString, _]]()
           )(
             any[ExecutionContext],
-            any[HeaderCarrier]
+            any[HeaderCarrier],
+            any[Materializer]
           )
       ).thenReturn(EitherT.rightT(()))
 
       val result =
-        controller.postNotification(MovementId("movement-1"), MessageId("messageId-1"))(fakeRequest)
+        controller.postNotification(movementId, messageId)(fakeRequest)
 
       status(result) mustBe ACCEPTED
     }
@@ -257,19 +259,20 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(
         mockPushPullNotificationService
           .sendPushNotification(
-            any[String].asInstanceOf[Option[BoxId]],
+            any[String].asInstanceOf[BoxId],
             any[Option[String]],
             any[String].asInstanceOf[MovementId],
             any[String].asInstanceOf[MessageId],
             any[Source[ByteString, _]]()
           )(
             any[ExecutionContext],
-            any[HeaderCarrier]
+            any[HeaderCarrier],
+            any[Materializer]
           )
       ).thenReturn(EitherT.rightT(()))
 
       val result =
-        controller.postNotification(MovementId("movement-1"), MessageId("messageId-1"))(fakeRequest)
+        controller.postNotification(movementId, messageId)(fakeRequest)
 
       status(result) mustBe NOT_FOUND
     }

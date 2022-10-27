@@ -19,6 +19,7 @@ package uk.gov.hmrc.transitmovementspushnotifications.connectors
 import com.google.inject._
 import play.api.http.Status._
 import play.api.http._
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse
@@ -99,7 +100,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     httpClientV2
       .post(url"$url")
       .addHeaders(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-      .withBody(messageNotification)
+      .withBody(Json.toJson(messageNotification))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
       .map {
         case Right(_)    => Right(())
