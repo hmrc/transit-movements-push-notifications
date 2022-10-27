@@ -16,21 +16,14 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
-import akka.http.javadsl.model.headers.ContentLength
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
-import cats.data.OptionT
 import com.google.inject.ImplementedBy
 import play.api.http.Status._
-import play.api.libs.json.JsString
-import play.api.libs.json.Json
-import play.api.libs.json.Writes
-import play.api.mvc.Result
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
@@ -40,12 +33,8 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNot
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
 import java.net.URI
-import java.nio.charset.StandardCharsets
 import javax.inject._
-import scala.concurrent.Future
 import scala.concurrent._
-import scala.util.Failure
-import scala.util.Success
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[PushPullNotificationServiceImpl])
@@ -55,10 +44,10 @@ trait PushPullNotificationService {
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
-  def sendPushNotification(boxId: Option[BoxId], contentLength: Option[String], movementId: MovementId, messageId: MessageId, body: Source[ByteString, _])(
-    implicit
+  def sendPushNotification(boxId: BoxId, contentLength: Option[String], movementId: MovementId, messageId: MessageId, body: Source[ByteString, _])(implicit
     ec: ExecutionContext,
-    hc: HeaderCarrier
+    hc: HeaderCarrier,
+    mat: Materializer
   ): EitherT[Future, PushPullNotificationError, Unit]
 
 }
@@ -106,8 +95,34 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
 
+  def payloadExceedsLimit(contentLength: Option[String]): Boolean = {
+    val maybeSize: Option[Int] = contentLength.flatMap(
+      str => str.toIntOption
+    )
+    if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
+  }
+
+  def determinePayload(contentLength: Option[String], body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer): Future[Option[String]] =
+    if (payloadExceedsLimit(contentLength))
+      Future.successful(None)
+    else
+      bodyToString(body).map(
+        str => Some(str)
+      )
+
+  private def buildUriAsStream(movementId: MovementId, messageId: MessageId): String =
+    (new URI(
+      s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}"
+    )).toString
+
+  private def bodyToString(body: Source[ByteString, _])(implicit mat: Materializer): Future[String] =
+    body
+      .reduce(_ ++ _)
+      .map(_.utf8String)
+      .runWith(Sink.head)
+
   override def sendPushNotification(
-    boxId: Option[BoxId],
+    boxId: BoxId,
     contentLength: Option[String],
     movementId: MovementId,
     messageId: MessageId,
@@ -118,52 +133,24 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     mat: Materializer
   ): EitherT[Future, PushPullNotificationError, Unit] = {
 
-    val result: OptionT[Future, Future[Either[PushPullNotificationError, Unit]]] = for {
-      id <- OptionT.fromOption[Future](boxId)
-      uri = buildUriAsStream(movementId, messageId)
-      payload <- determinePayload(contentLength, body)
-      messageNotification = MessageNotification(uri, Some(payload))
-      post                = pushPullNotificationConnector.postNotification(id, messageNotification)
-    } yield post.map {
-      case Right(_) => Right((): Unit)
-      case Left(error) =>
-        error.statusCode match {
-          case NOT_FOUND                                          => Left(BoxNotFound("Box does not exist"))
-          case BAD_REQUEST | FORBIDDEN | REQUEST_ENTITY_TOO_LARGE => Left(BadRequest("Bad Request"))
-          case ex @ _                                             => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
-        }
-    }
-    result // !!! TODO WRONG Return type!!!
-  }
+    lazy val uri     = buildUriAsStream(movementId, messageId)
+    lazy val payload = determinePayload(contentLength, body)
 
-  def determinePayload(contentLength: Option[String], body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer): OptionT[Future, String] =
-    if (payloadExceedsLimit(contentLength)) {
-      val noPayload: OptionT[Future, String] = OptionT.none
-      noPayload
-    } else {
-      val payload = OptionT.liftF(bodyToString(body))
+    EitherT(
       payload
-    }
-
-  def payloadExceedsLimit(contentLength: Option[String]): Boolean = {
-    val maybeSize: Option[Int] = contentLength.flatMap(
-      str => str.toIntOption
+        .flatMap(
+          body => pushPullNotificationConnector.postNotification(boxId, MessageNotification(uri, body))
+        )
+        .map {
+          case Right(_) => Right((): Unit)
+          case Left(error) =>
+            error.statusCode match {
+              case NOT_FOUND                                          => Left(BoxNotFound("Box does not exist"))
+              case BAD_REQUEST | FORBIDDEN | REQUEST_ENTITY_TOO_LARGE => Left(BadRequest("Bad Request"))
+              case ex @ _                                             => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
+            }
+        }
     )
-    if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
   }
-
-  def buildUriAsStream(movementId: MovementId, messageId: MessageId): String =
-    (new URI(
-      s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}"
-    )).toString
-
-  def maybeBody(contentLength: Option[String], body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer) =
-    if (payloadExceedsLimit(contentLength)) Future.successful("") else bodyToString(body)
-
-  def bodyToString(body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer): Future[String] =
-    body
-      .reduce(_ ++ _)
-      .map(_.utf8String)
-      .runWith(Sink.head)
 
 }

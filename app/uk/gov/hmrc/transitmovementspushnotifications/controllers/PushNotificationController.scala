@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
@@ -52,7 +53,8 @@ class PushNotificationController @Inject() (
   boxAssociationFactory: BoxAssociationFactory,
   clock: Clock
 )(implicit
-  ec: ExecutionContext
+  ec: ExecutionContext,
+  mat: Materializer
 ) extends BackendController(cc)
     with ConvertError {
 
@@ -65,8 +67,8 @@ class PushNotificationController @Inject() (
     implicit request =>
       val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
       (for {
-        maybeBoxId <- boxAssociationRepository.getBoxId(movementId, clock).asPresentation
-        result     <- pushPullNotificationService.sendPushNotification(maybeBoxId, contentLength, movementId, messageId, request.body).asPresentation
+        boxId  <- boxAssociationRepository.getBoxId(movementId, clock).asPresentation
+        result <- pushPullNotificationService.sendPushNotification(boxId, contentLength, movementId, messageId, request.body).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
         _ => Accepted

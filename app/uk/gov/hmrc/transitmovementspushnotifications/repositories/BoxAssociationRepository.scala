@@ -16,38 +16,25 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
-import cats.data.EitherT
 import akka.pattern.retry
+import cats.data.EitherT
 import com.google.inject.ImplementedBy
-import org.bson.conversions.Bson
-import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.IndexModel
-import org.mongodb.scala.model.IndexOptions
-import org.mongodb.scala.model.Indexes
 import com.mongodb.client.model.Filters.{eq => mEq}
 import com.mongodb.client.model.Updates.{set => mSet}
+import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.Codecs
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json._
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
-import uk.gov.hmrc.transitmovementspushnotifications.models.formats.MongoFormats
+import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.formats._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 
-import java.time.Clock
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import java.time._
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import scala.concurrent._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -56,7 +43,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[BoxAssociationRepositoryImpl])
 trait BoxAssociationRepository {
   def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit]
-  def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, Option[BoxId]]
+  def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, BoxId]
 }
 
 class BoxAssociationRepositoryImpl @Inject() (
@@ -109,14 +96,14 @@ class BoxAssociationRepositoryImpl @Inject() (
         Future.successful(Left(UnexpectedError(Some(ex))))
     })
 
-  override def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, Option[BoxId]] = {
+  override def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, BoxId] = {
     val setUpdated = mSet("updated", OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC))
     mongoRetry(Try(collection.findOneAndUpdate(mEq(movementId), setUpdated).headOption()) match {
       case Success(fOptBox) =>
         fOptBox.map(
           optBox =>
             optBox match {
-              case Some(box) => Right(Some(box.boxId))
+              case Some(box) => Right(box.boxId)
               case None      => Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}"))
             }
         )
