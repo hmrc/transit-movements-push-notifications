@@ -44,13 +44,14 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[BoxAssociationRepositoryImpl])
 trait BoxAssociationRepository {
   def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit]
-  def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, BoxId]
+  def getBoxId(movementId: MovementId): EitherT[Future, MongoError, BoxId]
 }
 
 @Singleton
 class BoxAssociationRepositoryImpl @Inject() (
   appConfig: AppConfig,
-  mongoComponent: MongoComponent
+  mongoComponent: MongoComponent,
+  clock: Clock
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[BoxAssociation](
       mongoComponent = mongoComponent,
@@ -98,7 +99,7 @@ class BoxAssociationRepositoryImpl @Inject() (
         Future.successful(Left(UnexpectedError(Some(ex))))
     })
 
-  override def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, BoxId] = {
+  override def getBoxId(movementId: MovementId): EitherT[Future, MongoError, BoxId] = {
     val setUpdated = mSet("updated", OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC))
     mongoRetry(Try(collection.findOneAndUpdate(mEq(movementId), setUpdated).headOption()) match {
       case Success(fOptBox) =>

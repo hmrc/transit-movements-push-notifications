@@ -59,9 +59,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNot
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.UnexpectedError
 
 import java.nio.charset.StandardCharsets
-import java.time.Clock
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -73,10 +70,6 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   val mockPushPullNotificationService      = mock[PushPullNotificationService]
   val mockMovementBoxAssociationRepository = mock[BoxAssociationRepository]
   val mockMovementBoxAssociationFactory    = mock[BoxAssociationFactory]
-
-  val lastUpdated: OffsetDateTime = OffsetDateTime.of(2022, 10, 17, 9, 1, 2, 0, ZoneOffset.UTC)
-  val now                         = OffsetDateTime.now
-  val clock: Clock                = Clock.fixed(now.toInstant, ZoneOffset.UTC)
 
   lazy val boxAssociationRequest = arbitraryBoxAssociationRequest.arbitrary.sample.get.copy(boxId = Some(BoxId("123")))
 
@@ -108,8 +101,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       stubControllerComponents(),
       mockPushPullNotificationService,
       mockMovementBoxAssociationRepository,
-      mockMovementBoxAssociationFactory,
-      clock
+      mockMovementBoxAssociationFactory
     )
 
   "createBoxAssociation" - {
@@ -225,7 +217,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "when called with a movement id, message id for which a box id is in the database" - {
       "should be successfully posted and return Unit ()" in {
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId], any[Clock]))
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
           .thenReturn(EitherT.rightT(boxId))
 
         when(
@@ -253,7 +245,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "when called with a movement id for which there is no box id " - {
       "should return box not found error" in {
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId], any[Clock]))
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
           .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
 
         when(
@@ -281,7 +273,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "when sending a bad request " - {
       "should return a bad request error" in {
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId], any[Clock]))
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
           .thenReturn(EitherT.rightT(boxId))
 
         when(
@@ -309,7 +301,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "when receiving an unexpected error" - {
       "should return an exception" in {
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId], any[Clock]))
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
           .thenReturn(EitherT.rightT(boxId))
 
         when(
