@@ -34,6 +34,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.
 import java.time._
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent._
 import scala.util.Failure
 import scala.util.Success
@@ -46,6 +47,7 @@ trait BoxAssociationRepository {
   def getBoxId(movementId: MovementId, clock: Clock): EitherT[Future, MongoError, BoxId]
 }
 
+@Singleton
 class BoxAssociationRepositoryImpl @Inject() (
   appConfig: AppConfig,
   mongoComponent: MongoComponent
