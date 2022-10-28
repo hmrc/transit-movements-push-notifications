@@ -22,6 +22,7 @@ import org.scalacheck.Gen
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -45,6 +46,9 @@ trait ModelGenerators extends BaseGenerators {
     Gen.delay(BoxId(UUID.randomUUID.toString))
   }
 
+  implicit lazy val arbitraryMovementType: Arbitrary[MovementType] =
+    Arbitrary(Gen.oneOf(MovementType.values))
+
   // Restricts the date times to the range of positive long numbers to avoid overflows.
   implicit lazy val arbitraryOffsetDateTime: Arbitrary[OffsetDateTime] =
     Arbitrary {
@@ -57,7 +61,7 @@ trait ModelGenerators extends BaseGenerators {
     Arbitrary {
       for {
         clientId     <- arbitrary[String]
-        movementType <- arbitrary[String]
+        movementType <- arbitrary[MovementType]
         boxId        <- arbitrary[Option[BoxId]]
       } yield BoxAssociationRequest(clientId, movementType, boxId)
     }
@@ -74,7 +78,7 @@ trait ModelGenerators extends BaseGenerators {
       for {
         movementId   <- arbitrary[MovementId]
         boxId        <- arbitrary[BoxId]
-        movementType <- arbitrary[String]
+        movementType <- arbitrary[MovementType]
         updated      <- arbitrary[OffsetDateTime]
       } yield BoxAssociation(movementId, boxId, movementType, updated)
     }

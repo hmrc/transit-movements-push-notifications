@@ -42,12 +42,14 @@ import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+
 import java.time.OffsetDateTime
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -115,7 +117,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
         .thenReturn(boxAssociation)
 
       when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
@@ -134,7 +136,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
         .thenReturn(boxAssociation)
 
       when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
@@ -148,7 +150,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe BAD_REQUEST
       contentAsJson(result) mustBe Json.obj(
         "code"    -> "BAD_REQUEST",
-        "message" -> "abc is not a valid movement type"
+        "message" -> "Expected clientId and movementType to be present in the body"
       )
     }
 
@@ -157,7 +159,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
         .thenReturn(boxAssociation)
 
       when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
@@ -228,7 +230,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(EitherT.rightT(boxId))
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[String]))
+      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
         .thenReturn(boxAssociation)
 
       when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))

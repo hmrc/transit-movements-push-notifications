@@ -25,11 +25,8 @@ import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.MovementTypeError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.MovementTypeError.InvalidMovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
@@ -56,20 +53,13 @@ class PushNotificationController @Inject() (
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
         boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
-        movementType   <- findValidMovementType(boxAssociation.movementType).asPresentation
-        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, movementType)
+        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
         _ => Created
       )
   }
-
-  private def findValidMovementType(movementType: String): EitherT[Future, MovementTypeError, String] =
-    MovementType.values.find(_.movementType == movementType) match {
-      case Some(mType) => EitherT.rightT[Future, MovementTypeError](mType.movementType)
-      case None        => EitherT.leftT[Future, String](InvalidMovementType(movementType))
-    }
 
   private def getBoxAssociationRequest(body: JsValue): EitherT[Future, PresentationError, BoxAssociationRequest] =
     body

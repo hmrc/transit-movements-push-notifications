@@ -28,6 +28,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
@@ -51,10 +52,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val emptyBody: JsValue = Json.obj()
 
-  val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", "arrival", None)
+  val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", MovementType.Arrival, None)
 
-  val boxAssociationRequestWithBoxId: BoxAssociationRequest        = BoxAssociationRequest("ID_456", "arrival", Some(BoxId("123")))
-  val boxAssociationRequestWithInvalidBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", "arrival", Some(BoxId("111")))
+  val boxAssociationRequestWithBoxId: BoxAssociationRequest        = BoxAssociationRequest("ID_456", MovementType.Arrival, Some(BoxId("123")))
+  val boxAssociationRequestWithInvalidBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", MovementType.Arrival, Some(BoxId("111")))
 
   "getBoxId" - {
     "when given a payload with client id and no boxId it returns the default box id" in {

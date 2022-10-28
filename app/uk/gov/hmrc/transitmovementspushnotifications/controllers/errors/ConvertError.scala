@@ -18,7 +18,6 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.MovementTypeError.InvalidMovementType
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
@@ -61,13 +60,6 @@ trait ConvertError {
     def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
       case PushPullNotificationError.UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
       case InvalidBoxId(msg)                             => PresentationError.badRequestError(message = msg)
-    }
-  }
-
-  implicit val movementTypeErrorConverter = new Converter[MovementTypeError] {
-
-    def convert(movementTypeError: MovementTypeError): PresentationError = movementTypeError match {
-      case InvalidMovementType(movementType) => PresentationError.badRequestError(s"$movementType is not a valid movement type")
     }
   }
 
