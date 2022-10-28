@@ -16,24 +16,22 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
-import akka.util.Timeout
 import cats.syntax.all._
-import org.scalatest.time.Millis
-import org.scalatest.time.Seconds
-import org.scalatest.time.Span
+import org.scalatest.time._
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BadRequest
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BoxNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.Forbidden
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidRequestPayload
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.RequestTooLarge
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
-
-import scala.concurrent.duration.DurationInt
 
 class ConvertErrorSpec extends SpecBase {
 
@@ -99,7 +97,12 @@ class ConvertErrorSpec extends SpecBase {
       val exception = new Exception("PPNS failure")
       Seq(
         PushPullNotificationError.UnexpectedError(Some(exception)) -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
-        InvalidBoxId("Box id does not exist")                      -> StandardError("Box id does not exist", ErrorCode.BadRequest)
+        InvalidBoxId("Box id does not exist")                      -> StandardError("Box id does not exist", ErrorCode.BadRequest),
+        BadRequest("Bad request posted")                           -> StandardError("Bad request posted", ErrorCode.BadRequest),
+        RequestTooLarge("Payload too large")                       -> StandardError("Payload too large", ErrorCode.BadRequest),
+        InvalidRequestPayload("Invalid payload")                   -> StandardError("Invalid payload", ErrorCode.BadRequest),
+        Forbidden("Forbidden request")                             -> StandardError("Forbidden request", ErrorCode.Forbidden),
+        BoxNotFound("Box not found")                               -> StandardError("Box not found", ErrorCode.NotFound)
       ).foreach {
         ppnsAndPresentationError =>
           val input = Left[PushPullNotificationError, Unit](ppnsAndPresentationError._1).toEitherT[Future]

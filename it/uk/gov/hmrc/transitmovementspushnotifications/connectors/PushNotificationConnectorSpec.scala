@@ -142,54 +142,74 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
 
       val boxId        = arbitraryBoxId.arbitrary.sample.value
       val validPayload = """{"message":"<CC007C>data</CC007C>"}"""
-      val messageNotification = MessageNotification(
-        messageUri = "http://www.gov.uk/",
+
+      val messageNotificationWithBody = MessageNotification(
+        messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
         messageBody = Some(validPayload)
       )
 
-      val messageId = arbitraryMessageId
+      val messageNotificationWithoutBody = MessageNotification(
+        messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
+        messageBody = None
+      )
 
-      val pushPullNotificationErrors = List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE)
-
-      "should return unit when the post is successful" in {
-        server.stubFor {
-          post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
-            aResponse()
-              .withStatus(OK)
-          )
-        }
-
-        val app = applicationBuilder.build()
-        running(app) {
-
-          val connector = app.injector.instanceOf[PushPullNotificationConnector]
-          whenReady(connector.postNotification(boxId, messageNotification)) {
-            result =>
-              result mustEqual Right((): Unit)
-          }
-
-        }
-      }
-
-      for (error <- pushPullNotificationErrors)
-        s"should return an UpstreamErrorResponse for the given returned $error" in {
+      "when called with a valid message notification with a body and box id that is in the database" - {
+        "should return Unit () when the post is successful" in {
           server.stubFor {
             post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
               aResponse()
-                .withStatus(error)
+                .withStatus(OK)
             )
           }
 
           val app = applicationBuilder.build()
           running(app) {
             val connector = app.injector.instanceOf[PushPullNotificationConnector]
-            whenReady(connector.postNotification(boxId, messageNotification)) {
-              result =>
-                result.left.get.statusCode mustEqual error
+            whenReady(connector.postNotification(boxId, messageNotificationWithBody)) {
+              _ mustEqual Right((): Unit)
+            }
+          }
+        }
+      }
+
+      "when called with a valid message notification with no body and box id that is in the database" - {
+        "should return Unit () when the post is successful" in {
+          server.stubFor {
+            post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
+              aResponse()
+                .withStatus(OK)
+            )
+          }
+
+          val app = applicationBuilder.build()
+          running(app) {
+            val connector = app.injector.instanceOf[PushPullNotificationConnector]
+            whenReady(connector.postNotification(boxId, messageNotificationWithoutBody)) {
+              _ mustEqual Right((): Unit)
+            }
+          }
+        }
+      }
+
+      for (error <- List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE))
+        "when called with an invalid request" - {
+          s"should return error an error response: $error" in {
+            server.stubFor {
+              post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
+                aResponse()
+                  .withStatus(error)
+              )
+            }
+
+            val app = applicationBuilder.build()
+            running(app) {
+              val connector = app.injector.instanceOf[PushPullNotificationConnector]
+              whenReady(connector.postNotification(boxId, messageNotificationWithBody)) {
+                _.left.get.statusCode mustEqual error
+              }
             }
           }
         }
     }
-
   }
 }

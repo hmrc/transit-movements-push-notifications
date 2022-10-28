@@ -95,14 +95,17 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
 
-  def payloadExceedsLimit(contentLength: Option[String]): Boolean = {
+  private def payloadExceedsLimit(contentLength: Option[String]): Boolean = {
     val maybeSize: Option[Int] = contentLength.flatMap(
       str => str.toIntOption
     )
     if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
   }
 
-  def determinePayload(contentLength: Option[String], body: Source[ByteString, _])(implicit ec: ExecutionContext, mat: Materializer): Future[Option[String]] =
+  private def determinePayload(contentLength: Option[String], body: Source[ByteString, _])(implicit
+    ec: ExecutionContext,
+    mat: Materializer
+  ): Future[Option[String]] =
     if (payloadExceedsLimit(contentLength))
       Future.successful(None)
     else

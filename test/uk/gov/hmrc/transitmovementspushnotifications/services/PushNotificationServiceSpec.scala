@@ -16,28 +16,32 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
-import play.api.http.Status.INTERNAL_SERVER_ERROR
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import play.api.http.Status._
+import play.api.libs.json._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
-import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
+import uk.gov.hmrc.transitmovementspushnotifications.base._
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import java.nio.charset.StandardCharsets
+import scala.concurrent._
 
 class PushNotificationServiceSpec extends SpecBase with ModelGenerators with TestActorSystem {
 
-  val clientId    = "clientId"
-  val boxResponse = arbitraryBoxResponse.arbitrary.sample.get
+  val clientId        = "clientId"
+  val boxResponse     = arbitraryBoxResponse.arbitrary.sample.get
+  lazy val messageId  = MessageId("message-id-1") //arbitraryMessageId.arbitrary.sample.get
+  lazy val movementId = arbitraryMovementId.arbitrary.sample.get
+  val maxPayloadSize  = 80000
 
   val mockPushPullNotificationConnector = mock[PushPullNotificationConnector]
   private val mockAppConfig             = mock[AppConfig]
@@ -91,6 +95,144 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         r =>
           r mustBe Right(boxResponse.boxId)
       }
+    }
+
+    "sendPushNotification" - {
+
+      val payload = Source.single(ByteString("<CC007>some payload</CC07>)", StandardCharsets.UTF_8))
+
+      "when given a valid boxId and a valid payload with size less than maximum allowed" - {
+        "should return a valid response" in {
+
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Right()))
+
+          val result = sut.sendPushNotification(
+            boxId = boxResponse.boxId,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            movementId = movementId,
+            messageId = messageId,
+            body = payload
+          )
+
+          whenReady(result.value) {
+            _ mustBe Right((): Unit)
+          }
+        }
+      }
+
+      "when given a valid boxId and a valid payload with size greater than maximum allowed" - {
+        "should return a valid response" in {
+
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Right()))
+
+          val result = sut.sendPushNotification(
+            boxId = boxResponse.boxId,
+            contentLength = Some((maxPayloadSize + 1).toString),
+            movementId = movementId,
+            messageId = messageId,
+            body = payload
+          )
+
+          whenReady(result.value) {
+            _ mustBe Right((): Unit)
+          }
+        }
+      }
+
+      "when given a boxId that is not in the database" - {
+        "should return a not found response" in {
+
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", NOT_FOUND))))
+
+          val result = sut.sendPushNotification(
+            boxId = boxResponse.boxId,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            movementId = movementId,
+            messageId = messageId,
+            body = payload
+          )
+
+          whenReady(result.value) {
+            _ mustBe Left(BoxNotFound("Box does not exist"))
+          }
+        }
+      }
+
+      "when sending a badly formed request" - {
+        "should return a response indicating a bad request was received" in {
+
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", BAD_REQUEST))))
+
+          val result = sut.sendPushNotification(
+            boxId = boxResponse.boxId,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            movementId = movementId,
+            messageId = messageId,
+            body = payload
+          )
+
+          whenReady(result.value) {
+            _ mustBe Left(BadRequest("Bad Request"))
+          }
+        }
+      }
+
+      "when sending a forbidden request" - {
+        "should return a response indicating a bad request was received" in {
+
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", FORBIDDEN))))
+
+          val result = sut.sendPushNotification(
+            boxId = boxResponse.boxId,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            movementId = movementId,
+            messageId = messageId,
+            body = payload
+          )
+
+          whenReady(result.value) {
+            _ mustBe Left(BadRequest("Bad Request"))
+          }
+        }
+      }
+
+      "when sending a request with a payload that is too large" - {
+        "should return a response indicating a bad request was received" in {
+
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", REQUEST_ENTITY_TOO_LARGE))))
+
+          val result = sut.sendPushNotification(
+            boxId = boxResponse.boxId,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            movementId = movementId,
+            messageId = messageId,
+            body = payload
+          )
+
+          whenReady(result.value) {
+            _ mustBe Left(BadRequest("Bad Request"))
+          }
+        }
+      }
+
     }
 
   }

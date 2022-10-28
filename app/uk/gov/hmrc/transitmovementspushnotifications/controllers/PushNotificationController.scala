@@ -58,11 +58,6 @@ class PushNotificationController @Inject() (
 ) extends BackendController(cc)
     with ConvertError {
 
-  private lazy val streamFromMemory: BodyParser[Source[ByteString, _]] = BodyParser {
-    _ =>
-      Accumulator.source[ByteString].map(Right.apply)
-  }
-
   def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
     implicit request =>
       val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
@@ -94,5 +89,10 @@ class PushNotificationController @Inject() (
       case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
       case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId to be present in the body"))
     }
+
+  private lazy val streamFromMemory: BodyParser[Source[ByteString, _]] = BodyParser {
+    _ =>
+      Accumulator.source[ByteString].map(Right.apply)
+  }
 
 }
