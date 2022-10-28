@@ -17,9 +17,11 @@
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
 import com.google.inject.ImplementedBy
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
+
 import java.time.Clock
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -27,7 +29,7 @@ import javax.inject.Inject
 
 @ImplementedBy(classOf[BoxAssociationFactoryImpl])
 trait BoxAssociationFactory {
-  def create(boxId: BoxId, movementId: MovementId): BoxAssociation
+  def create(boxId: BoxId, movementId: MovementId, movementType: MovementType): BoxAssociation
 }
 
 class BoxAssociationFactoryImpl @Inject() (
@@ -36,11 +38,13 @@ class BoxAssociationFactoryImpl @Inject() (
 
   def create(
     boxId: BoxId,
-    movementId: MovementId
+    movementId: MovementId,
+    movementType: MovementType
   ): BoxAssociation =
     BoxAssociation(
       _id = movementId,
       boxId = boxId,
+      movementType = movementType,
       updated = OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC)
     )
 

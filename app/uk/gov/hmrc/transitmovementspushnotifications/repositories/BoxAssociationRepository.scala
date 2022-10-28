@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
-import cats.data.EitherT
 import akka.pattern.retry
+import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
@@ -33,6 +33,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.formats.MongoFormats
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
+
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

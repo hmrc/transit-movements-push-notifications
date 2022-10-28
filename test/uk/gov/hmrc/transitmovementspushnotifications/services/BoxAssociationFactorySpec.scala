@@ -18,6 +18,7 @@ package uk.gov.hmrc.transitmovementspushnotifications.services
 
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 
 import java.security.SecureRandom
 import java.time.Clock
@@ -30,14 +31,25 @@ class BoxAssociationFactorySpec extends SpecBase with ModelGenerators {
   val clock: Clock            = Clock.fixed(instant.toInstant, ZoneOffset.UTC)
   val random                  = new SecureRandom
 
-  "create" - {
+  "create box association for arrival" - {
     val sut = new BoxAssociationFactoryImpl(clock)
 
-    "will create a box association with _id equal to the movementId supplied" in {
+    "will create a box association with _id equal to the movementId supplied for arrival" in {
       val boxId      = arbitraryBoxId.arbitrary.sample.get
       val movementId = arbitraryMovementId.arbitrary.sample.get
 
-      val boxAssociation = sut.create(boxId, movementId)
+      val boxAssociation = sut.create(boxId, movementId, MovementType.Arrival)
+      boxAssociation._id.value mustBe movementId.value
+    }
+  }
+
+  "create box association for departure" - {
+    val sut = new BoxAssociationFactoryImpl(clock)
+
+    "will create a box association with _id equal to the movementId supplied for departure" in {
+      val boxId          = arbitraryBoxId.arbitrary.sample.get
+      val movementId     = arbitraryMovementId.arbitrary.sample.get
+      val boxAssociation = sut.create(boxId, movementId, MovementType.Departure)
 
       boxAssociation._id.value mustBe movementId.value
     }

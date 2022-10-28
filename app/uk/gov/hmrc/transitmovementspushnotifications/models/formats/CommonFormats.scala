@@ -17,9 +17,9 @@
 package uk.gov.hmrc.transitmovementspushnotifications.models.formats
 
 import cats.data.NonEmptyList
+import play.api.libs.functional.syntax.toInvariantFunctorOps
 import play.api.libs.json.Format
 import play.api.libs.json.Json
-import play.api.libs.functional.syntax.toInvariantFunctorOps
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 
