@@ -97,7 +97,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       }
     }
 
-    "when given a payload with a invalid box id it should return InvalidBoxId" in {
+    "when given a payload with an invalid box id it should return InvalidBoxId" in {
       when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
         .thenReturn(Future.successful(boxResponseList))
 
