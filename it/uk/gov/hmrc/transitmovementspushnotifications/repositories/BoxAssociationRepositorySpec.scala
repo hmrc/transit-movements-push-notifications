@@ -51,7 +51,8 @@ class BoxAssociationRepositorySpec
     with ModelGenerators
     with OptionValues {
 
-  val instant: OffsetDateTime = OffsetDateTime.of(2022, 5, 25, 16, 0, 0, 0, ZoneOffset.UTC)
+  val lastUpdated: OffsetDateTime = OffsetDateTime.of(2022, 10, 17, 9, 1, 2, 0, ZoneOffset.UTC)
+  val clock: Clock                = Clock.fixed(lastUpdated.toInstant, ZoneOffset.UTC)
 
   override lazy val mongoComponent: MongoComponent = {
     val databaseName: String = "test-box_association"
@@ -62,7 +63,7 @@ class BoxAssociationRepositorySpec
   implicit lazy val app: Application = GuiceApplicationBuilder().configure().build()
   private val appConfig              = app.injector.instanceOf[AppConfig]
 
-  override lazy val repository = new BoxAssociationRepositoryImpl(appConfig, mongoComponent)
+  override lazy val repository = new BoxAssociationRepositoryImpl(appConfig, mongoComponent, clock)
 
   "BoxAssociationRepository" should "have the correct name" in {
     repository.collectionName shouldBe "box_association"
@@ -79,8 +80,7 @@ class BoxAssociationRepositorySpec
     result should be(Right(()))
 
     val firstItem = await {
-      val r: concurrent.Future[BoxAssociation] = repository.collection.find(Filters.eq("_id", boxAssociation._id.value)).first().toFuture()
-      r
+      repository.collection.find(Filters.eq("_id", boxAssociation._id.value)).first().toFuture()
     }
 
     firstItem._id.value should be(boxAssociation._id.value)
@@ -108,9 +108,6 @@ class BoxAssociationRepositorySpec
 
     val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get
 
-    val lastUpdated: OffsetDateTime = OffsetDateTime.of(2022, 10, 17, 9, 1, 2, 0, ZoneOffset.UTC)
-    val clock: Clock                = Clock.fixed(lastUpdated.toInstant, ZoneOffset.UTC)
-
     val insertBox = await(
       repository.insert(boxAssociation).value
     )
@@ -118,19 +115,16 @@ class BoxAssociationRepositorySpec
     insertBox should be(Right(()))
 
     val result = await(
-      repository.getBoxId(boxAssociation._id, clock).value
+      repository.getBoxId(boxAssociation._id).value
     )
 
     result should be(Right(boxAssociation.boxId))
   }
 
   "getBoxId" should "return a DocumentNotFound error for a movementId that is not in the database" in {
-    val now: OffsetDateTime = OffsetDateTime.of(2022, 10, 17, 9, 1, 3, 0, ZoneOffset.UTC)
-    val clock: Clock        = Clock.fixed(now.toInstant, ZoneOffset.UTC)
-
     val unknownMovementId = MovementId("Unknown Movement Id")
     val result = await(
-      repository.getBoxId(unknownMovementId, clock).value
+      repository.getBoxId(unknownMovementId).value
     )
 
     result should be(Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${unknownMovementId.value}")))
