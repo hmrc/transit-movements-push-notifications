@@ -30,7 +30,8 @@ import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotifica
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent._
@@ -39,7 +40,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val clientId        = "clientId"
   val boxResponse     = arbitraryBoxResponse.arbitrary.sample.get
-  lazy val messageId  = MessageId("message-id-1") //arbitraryMessageId.arbitrary.sample.get
+  lazy val messageId  = MessageId("message-id-1")
   lazy val movementId = arbitraryMovementId.arbitrary.sample.get
   val maxPayloadSize  = 80000
 
@@ -66,9 +67,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       val result = sut.getBoxId(boxAssociationRequestWithoutBoxId)
 
       whenReady(result.value) {
-        r =>
-          r.isRight mustBe true
-          r mustBe Right(boxResponse.boxId)
+        _ mustBe Right(boxResponse.boxId)
       }
     }
 
@@ -80,8 +79,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       val result = sut.getBoxId(boxAssociationRequestWithoutBoxId)
 
       whenReady(result.value) {
-        r =>
-          r mustBe Left(UnexpectedError(Some(exception)))
+        _ mustBe Left(UnexpectedError(Some(exception)))
       }
     }
 
@@ -168,12 +166,13 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       }
 
       "when sending a badly formed request" - {
-        "should return a response indicating a bad request was received" in {
+        "should return a response indicating an unexpected error occurred" in {
 
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
+          val errorResponse = UpstreamErrorResponse("error", BAD_REQUEST)
           when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
-            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", BAD_REQUEST))))
+            .thenReturn(Future.successful(Left(errorResponse)))
 
           val result = sut.sendPushNotification(
             boxId = boxResponse.boxId,
@@ -184,51 +183,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
           )
 
           whenReady(result.value) {
-            _ mustBe Left(BadRequest("Bad Request"))
-          }
-        }
-      }
-
-      "when sending a forbidden request" - {
-        "should return a response indicating a bad request was received" in {
-
-          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
-
-          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
-            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", FORBIDDEN))))
-
-          val result = sut.sendPushNotification(
-            boxId = boxResponse.boxId,
-            contentLength = Some((maxPayloadSize - 1).toString),
-            movementId = movementId,
-            messageId = messageId,
-            body = payload
-          )
-
-          whenReady(result.value) {
-            _ mustBe Left(BadRequest("Bad Request"))
-          }
-        }
-      }
-
-      "when sending a request with a payload that is too large" - {
-        "should return a response indicating a bad request was received" in {
-
-          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
-
-          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
-            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", REQUEST_ENTITY_TOO_LARGE))))
-
-          val result = sut.sendPushNotification(
-            boxId = boxResponse.boxId,
-            contentLength = Some((maxPayloadSize - 1).toString),
-            movementId = movementId,
-            messageId = messageId,
-            body = payload
-          )
-
-          whenReady(result.value) {
-            _ mustBe Left(BadRequest("Bad Request"))
+            _ mustBe Left(UnexpectedError(Some(errorResponse)))
           }
         }
       }

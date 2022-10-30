@@ -53,10 +53,10 @@ import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.BadRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
@@ -132,7 +132,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PushPullNotificationError.InvalidBoxId(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
+        .thenReturn(EitherT.leftT(InvalidBoxId(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
 
       val request = fakeRequest(method = POST, body = validBody)
 
@@ -163,7 +163,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return INTERNAL_SERVER_ERROR when there's an unexpected PPNS failure" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
+        .thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception("error")))))
 
       val request = fakeRequest(method = POST, body = validBody)
 
@@ -271,7 +271,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     }
 
     "when sending a bad request " - {
-      "should return a bad request error" in {
+      "should return an internal server error" in {
 
         when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
           .thenReturn(EitherT.rightT(boxId))
@@ -294,12 +294,12 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         val result =
           controller.postNotification(movementId, messageId)(fakeRequest)
 
-        status(result) mustBe BAD_REQUEST
+        status(result) mustBe INTERNAL_SERVER_ERROR
       }
     }
 
     "when receiving an unexpected error" - {
-      "should return an exception" in {
+      "should return an internal server error" in {
 
         when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
           .thenReturn(EitherT.rightT(boxId))

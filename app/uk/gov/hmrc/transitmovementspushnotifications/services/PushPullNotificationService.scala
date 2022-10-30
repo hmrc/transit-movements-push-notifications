@@ -29,8 +29,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotifica
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
 
 import java.net.URI
 import javax.inject._
@@ -74,7 +73,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
         .recover {
           case NonFatal(e) =>
-            Left(PushPullNotificationError.UnexpectedError(thr = Some(e)))
+            Left(UnexpectedError(thr = Some(e)))
         }
     )
 
@@ -87,11 +86,11 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         .map {
           boxList =>
             if (boxList.exists(_.boxId == boxId)) Right(boxId)
-            else Left(PushPullNotificationError.InvalidBoxId(s"Box id provided does not exist: $boxId"))
+            else Left(InvalidBoxId(s"Box id provided does not exist: $boxId"))
         }
         .recover {
           case NonFatal(e) =>
-            Left(PushPullNotificationError.UnexpectedError(thr = Some(e)))
+            Left(UnexpectedError(thr = Some(e)))
         }
     )
 
@@ -148,9 +147,8 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           case Right(_) => Right((): Unit)
           case Left(error) =>
             error.statusCode match {
-              case NOT_FOUND                                          => Left(BoxNotFound("Box does not exist"))
-              case BAD_REQUEST | FORBIDDEN | REQUEST_ENTITY_TOO_LARGE => Left(BadRequest("Bad Request"))
-              case ex @ _                                             => Left(UnexpectedError(Some(new Exception(s"Unexpected error: $ex"))))
+              case NOT_FOUND => Left(BoxNotFound("Box does not exist"))
+              case _         => Left(UnexpectedError(Some(error)))
             }
         }
     )
