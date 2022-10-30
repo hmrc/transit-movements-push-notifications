@@ -18,14 +18,14 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
-
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

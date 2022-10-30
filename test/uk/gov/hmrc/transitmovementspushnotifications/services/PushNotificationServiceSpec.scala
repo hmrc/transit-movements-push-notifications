@@ -20,7 +20,9 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
+import play.api.http.Status.BAD_REQUEST
 import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
@@ -31,15 +33,16 @@ import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
 import java.nio.charset.StandardCharsets
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -99,7 +102,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       val result = sut.getBoxId(boxAssociationRequestWithBoxId)
 
       whenReady(result.value) {
-        r => r => mustBe Right (boxResponse.boxId)
+        _ mustBe Right(BoxId("123"))
       }
     }
 
@@ -110,8 +113,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
 
       whenReady(result.value) {
-        r =>
-          r mustBe Left(InvalidBoxId("Box id provided does not exist: BoxId(111)"))
+        _ mustBe Left(InvalidBoxId("Box id provided does not exist: BoxId(111)"))
       }
     }
 

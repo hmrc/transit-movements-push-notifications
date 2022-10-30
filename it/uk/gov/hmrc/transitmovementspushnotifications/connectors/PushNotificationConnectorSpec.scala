@@ -36,7 +36,6 @@ import play.api.test.Helpers.FORBIDDEN
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.NOT_FOUND
 import play.api.test.Helpers.OK
-import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.running
