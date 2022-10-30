@@ -132,7 +132,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(InvalidBoxId(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
+        .thenReturn(EitherT.leftT(InvalidBoxId(boxAssociation.boxId.value)))
 
       val request = fakeRequest(method = POST, body = validBody)
 
@@ -142,7 +142,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       status(result) mustBe BAD_REQUEST
       contentAsJson(result) mustBe Json.obj(
         "code"    -> "BAD_REQUEST",
-        "message" -> "Box id provided does not exist: 123"
+        "message" -> "Invalid box id: 123"
       )
     }
 

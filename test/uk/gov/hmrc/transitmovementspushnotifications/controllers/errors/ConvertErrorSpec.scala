@@ -94,10 +94,10 @@ class ConvertErrorSpec extends SpecBase {
     "for a failure" in {
       val exception = new Exception("PPNS failure")
       Seq(
-        UnexpectedError(Some(exception))      -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
-        InvalidBoxId("Box id does not exist") -> StandardError("Box id does not exist", ErrorCode.BadRequest),
-        BadRequest("Internal server error")   -> InternalServiceError("Internal server error", InternalServerError),
-        BoxNotFound("Box not found")          -> StandardError("Box not found", ErrorCode.NotFound)
+        UnexpectedError(Some(exception))    -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
+        InvalidBoxId("box-id-xx")           -> StandardError("Invalid box id: box-id-xx", ErrorCode.BadRequest),
+        BadRequest("Internal server error") -> InternalServiceError("Internal server error", InternalServerError),
+        BoxNotFound("Box not found")        -> StandardError("Box not found", ErrorCode.NotFound)
       ).foreach {
         ppnsAndPresentationError =>
           val input = Left[PushPullNotificationError, Unit](ppnsAndPresentationError._1).toEitherT[Future]

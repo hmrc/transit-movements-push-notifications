@@ -62,7 +62,7 @@ trait ConvertError {
 
     def convert(headerExtractError: PushPullNotificationError): PresentationError = headerExtractError match {
       case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId(msg)   => PresentationError.badRequestError(msg)
+      case InvalidBoxId(boxId) => PresentationError.badRequestError(s"Invalid box id: $boxId")
       case BadRequest(msg)     => PresentationError.internalServerError(msg)
       case BoxNotFound(msg)    => PresentationError.notFoundError(msg)
     }

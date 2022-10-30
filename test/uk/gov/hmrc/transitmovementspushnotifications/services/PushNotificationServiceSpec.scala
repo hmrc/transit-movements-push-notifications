@@ -149,7 +149,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
-            .thenReturn(Future.successful(Left(UpstreamErrorResponse("error", NOT_FOUND))))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse(boxResponse.boxId.toString, NOT_FOUND))))
 
           val result = sut.sendPushNotification(
             boxId = boxResponse.boxId,
@@ -160,7 +160,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
           )
 
           whenReady(result.value) {
-            _ mustBe Left(BoxNotFound("Box does not exist"))
+            _ mustBe Left(BoxNotFound(boxResponse.boxId.value))
           }
         }
       }
@@ -170,7 +170,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-          val errorResponse = UpstreamErrorResponse("error", BAD_REQUEST)
+          val errorResponse = UpstreamErrorResponse(boxResponse.boxId.toString, BAD_REQUEST)
           when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
             .thenReturn(Future.successful(Left(errorResponse)))
 

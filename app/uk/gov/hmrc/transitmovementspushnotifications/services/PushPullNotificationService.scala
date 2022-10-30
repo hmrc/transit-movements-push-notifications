@@ -86,7 +86,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         .map {
           boxList =>
             if (boxList.exists(_.boxId == boxId)) Right(boxId)
-            else Left(InvalidBoxId(s"Box id provided does not exist: $boxId"))
+            else Left(BoxNotFound(boxId.value))
         }
         .recover {
           case NonFatal(e) =>
@@ -147,7 +147,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           case Right(_) => Right((): Unit)
           case Left(error) =>
             error.statusCode match {
-              case NOT_FOUND => Left(BoxNotFound("Box does not exist"))
+              case NOT_FOUND => Left(BoxNotFound(boxId.value))
               case _         => Left(UnexpectedError(Some(error)))
             }
         }
