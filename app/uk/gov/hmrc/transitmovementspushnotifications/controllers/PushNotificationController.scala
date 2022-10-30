@@ -73,7 +73,7 @@ class PushNotificationController @Inject() (
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
         boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
-        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId)
+        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
@@ -81,11 +81,11 @@ class PushNotificationController @Inject() (
       )
   }
 
-  def getBoxAssociationRequest(body: JsValue): EitherT[Future, PresentationError, BoxAssociationRequest] =
+  private def getBoxAssociationRequest(body: JsValue): EitherT[Future, PresentationError, BoxAssociationRequest] =
     body
       .validate[BoxAssociationRequest] match {
       case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
-      case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId to be present in the body"))
+      case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId and movementType to be present in the body"))
     }
 
   private lazy val streamFromMemory: BodyParser[Source[ByteString, _]] = BodyParser {

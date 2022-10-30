@@ -17,14 +17,15 @@
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -51,7 +52,6 @@ trait ConvertError {
   }
 
   implicit val headerExtractErrorConverter = new Converter[HeaderExtractError] {
-    import HeaderExtractError._
 
     def convert(headerExtractError: HeaderExtractError): PresentationError = headerExtractError match {
       case NoHeaderFound(message) => PresentationError.badRequestError(message)
@@ -60,9 +60,9 @@ trait ConvertError {
 
   implicit val ppnsErrorConverter = new Converter[PushPullNotificationError] {
 
-    def convert(headerExtractError: PushPullNotificationError): PresentationError = headerExtractError match {
+    def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
       case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId(boxId) => PresentationError.badRequestError(s"Invalid box id: $boxId")
+      case InvalidBoxId(msg)   => PresentationError.badRequestError(s"Invalid box id: $msg")
       case BadRequest(msg)     => PresentationError.internalServerError(msg)
       case BoxNotFound(msg)    => PresentationError.notFoundError(msg)
     }

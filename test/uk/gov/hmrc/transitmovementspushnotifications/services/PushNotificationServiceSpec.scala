@@ -20,30 +20,38 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
-import play.api.http.Status._
-import play.api.libs.json._
+import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.transitmovementspushnotifications.base._
+import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
+import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
 import java.nio.charset.StandardCharsets
-import scala.concurrent._
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class PushNotificationServiceSpec extends SpecBase with ModelGenerators with TestActorSystem {
 
   val clientId        = "clientId"
   val boxResponse     = arbitraryBoxResponse.arbitrary.sample.get
-  lazy val messageId  = MessageId("message-id-1")
-  lazy val movementId = arbitraryMovementId.arbitrary.sample.get
-  val maxPayloadSize  = 80000
+  var boxResponseList = Seq(BoxResponse(BoxId("123")), BoxResponse(BoxId("456")))
 
+  lazy val messageId                    = MessageId("message-id-1")
+  lazy val movementId                   = arbitraryMovementId.arbitrary.sample.get
+  val maxPayloadSize                    = 80000
   val mockPushPullNotificationConnector = mock[PushPullNotificationConnector]
   private val mockAppConfig             = mock[AppConfig]
 
@@ -54,9 +62,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val emptyBody: JsValue = Json.obj()
 
-  val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", None)
+  val boxAssociationRequestWithoutBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_123", MovementType.Arrival, None)
 
-  val boxAssociationRequestWithBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", Some(boxResponse.boxId))
+  val boxAssociationRequestWithBoxId: BoxAssociationRequest        = BoxAssociationRequest("ID_456", MovementType.Arrival, Some(BoxId("123")))
+  val boxAssociationRequestWithInvalidBoxId: BoxAssociationRequest = BoxAssociationRequest("ID_456", MovementType.Arrival, Some(BoxId("111")))
 
   "getBoxId" - {
     "when given a payload with client id and no boxId it returns the default box id" in {
@@ -85,13 +94,24 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
     "when given a payload with a valid box id it returns the given box id" in {
       when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(Future.successful(Seq(boxResponse)))
+        .thenReturn(Future.successful(boxResponseList))
 
       val result = sut.getBoxId(boxAssociationRequestWithBoxId)
 
       whenReady(result.value) {
+        r => r => mustBe Right (boxResponse.boxId)
+      }
+    }
+
+    "when given a payload with an invalid box id it should return InvalidBoxId" in {
+      when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
+        .thenReturn(Future.successful(boxResponseList))
+
+      val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
+
+      whenReady(result.value) {
         r =>
-          r mustBe Right(boxResponse.boxId)
+          r mustBe Left(InvalidBoxId("Box id provided does not exist: BoxId(111)"))
       }
     }
 

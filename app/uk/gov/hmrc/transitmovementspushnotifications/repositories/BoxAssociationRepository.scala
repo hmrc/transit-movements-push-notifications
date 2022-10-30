@@ -29,9 +29,12 @@ import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 
 import java.time._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
+
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton

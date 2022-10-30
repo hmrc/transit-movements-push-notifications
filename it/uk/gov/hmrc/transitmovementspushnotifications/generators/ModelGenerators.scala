@@ -24,6 +24,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -56,6 +57,9 @@ trait ModelGenerators extends BaseGenerators {
     Gen.delay(BoxId(UUID.randomUUID.toString))
   }
 
+  implicit lazy val arbitraryMovementType: Arbitrary[MovementType] =
+    Arbitrary(Gen.oneOf(MovementType.values))
+
   // Restricts the date times to the range of positive long numbers to avoid overflows.
   implicit lazy val arbitraryOffsetDateTime: Arbitrary[OffsetDateTime] =
     Arbitrary {
@@ -67,9 +71,10 @@ trait ModelGenerators extends BaseGenerators {
   implicit lazy val arbitraryBoxAssociationRequest: Arbitrary[BoxAssociationRequest] =
     Arbitrary {
       for {
-        clientId <- arbitrary[String]
-        boxId    <- arbitrary[Option[BoxId]]
-      } yield BoxAssociationRequest(clientId, boxId)
+        clientId     <- arbitrary[String]
+        movementType <- arbitrary[MovementType]
+        boxId        <- arbitrary[Option[BoxId]]
+      } yield BoxAssociationRequest(clientId, movementType, boxId)
     }
 
   implicit lazy val arbitraryBoxResponse: Arbitrary[BoxResponse] =
@@ -82,10 +87,11 @@ trait ModelGenerators extends BaseGenerators {
   implicit lazy val arbitraryBoxAssociation: Arbitrary[BoxAssociation] =
     Arbitrary {
       for {
-        boxId      <- arbitrary[BoxId]
-        movementId <- arbitrary[MovementId]
-        updated    <- arbitrary[OffsetDateTime]
-      } yield BoxAssociation(movementId, boxId, updated)
+        boxId        <- arbitrary[BoxId]
+        movementId   <- arbitrary[MovementId]
+        movementType <- arbitrary[MovementType]
+        updated      <- arbitrary[OffsetDateTime]
+      } yield BoxAssociation(movementId, boxId, movementType, updated)
     }
 
   implicit lazy val arbitraryMessageNotification: Arbitrary[MessageNotification] =

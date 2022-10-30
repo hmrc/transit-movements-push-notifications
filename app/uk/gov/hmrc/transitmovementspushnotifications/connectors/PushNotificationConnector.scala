@@ -16,6 +16,10 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
+import play.api.http.Status._
+import play.api.http._
+import play.api.libs.json.Json
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import com.google.inject._
 import play.api.http.Status._
 import play.api.http._
@@ -26,11 +30,19 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
+import com.google.inject.Inject
+import io.lemonlabs.uri.QueryString
+import play.api.http.Status.OK
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.models._
+
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
-import scala.concurrent._
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
 import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[PushPullNotificationConnectorImpl])
@@ -60,7 +72,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val url = appConfig.pushPullUrl.withPath(getBoxRoute(clientId))
+    val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId)))
 
     httpClientV2
       .get(url"$url")
@@ -76,7 +88,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
 
   override def getAllBoxes(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Seq[BoxResponse]] = {
 
-    val url = appConfig.pushPullUrl.withPath(getAllBoxesRoute)
+    val url = appConfig.pushPullUrl.withPath(getBoxRoute)
 
     httpClientV2
       .get(url"$url")

@@ -38,11 +38,6 @@ class BaseConnectorSpec extends SpecBase {
 
   object Harness extends BaseConnector
 
-  "the validation URL for an IE015 message type on localhost should be as expected" in {
-    val urlPath = Harness.getBoxRoute("CLIENT_XYZ")
-
-    urlPath.toString() mustBe "/box"
-  }
   "HttpResponseHelpers" - new BaseConnector() {
 
     case class TestObject(string: String, int: Int)

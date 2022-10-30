@@ -55,8 +55,9 @@ class MongoFormatsSpec extends AnyFreeSpec with Matchers with ModelGenerators wi
     val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get
 
     MongoFormats.boxAssociationFormat.writes(boxAssociation) mustBe Json.obj(
-      "_id"   -> boxAssociation._id.value,
-      "boxId" -> boxAssociation.boxId.value,
+      "_id"          -> boxAssociation._id.value,
+      "boxId"        -> boxAssociation.boxId.value,
+      "movementType" -> boxAssociation.movementType,
       "updated" -> Json.obj(
         "$date" -> Json.obj(
           "$numberLong" -> boxAssociation.updated.toInstant.toEpochMilli.toString

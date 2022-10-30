@@ -16,12 +16,21 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import org.scalacheck.Arbitrary.arbitrary
+import org.scalacheck.Gen
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.time._
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
+import play.api.libs.json.Json
+import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
 import play.api.test.Helpers.BAD_REQUEST
 import play.api.test.Helpers.FORBIDDEN
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
@@ -138,6 +147,83 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
       }
     }
 
+    "getAllBoxes" - {
+      lazy val boxIdList = Gen.listOfN(3, arbitrary[BoxResponse]).sample.get
+
+      "should return list of box id when the pushPullNotification API returns 200 and valid JSON" in {
+        server.stubFor {
+          get(urlPathEqualTo("/box")).willReturn(
+            aResponse()
+              .withStatus(OK)
+              .withBody(Json.toJson(boxIdList).toString())
+          )
+        }
+
+        val app = applicationBuilder.build()
+
+        running(app) {
+          val connector = app.injector.instanceOf[PushPullNotificationConnector]
+          whenReady(connector.getAllBoxes) {
+            result =>
+              result mustEqual boxIdList
+          }
+        }
+
+      }
+
+      "should return failed future when the pushPullNotification API returns 404" in {
+        server.stubFor {
+          get(urlPathEqualTo("/box")).willReturn(
+            aResponse()
+              .withStatus(NOT_FOUND)
+          )
+        }
+
+        val app = applicationBuilder.build()
+
+        running(app) {
+          val connector = app.injector.instanceOf[PushPullNotificationConnector]
+          val result    = connector.getAllBoxes
+
+          await(
+            result
+              .map {
+                _ => fail("This should not succeed")
+              }
+              .recover {
+                case UpstreamErrorResponse(_, NOT_FOUND, _, _) =>
+              }
+          )
+        }
+      }
+
+      "should return failed future when the pushPullNotification API returns 500" in {
+        server.stubFor {
+          get(urlPathEqualTo("/box")).willReturn(
+            aResponse()
+              .withStatus(INTERNAL_SERVER_ERROR)
+          )
+        }
+
+        val app = applicationBuilder.build()
+
+        running(app) {
+          val connector = app.injector.instanceOf[PushPullNotificationConnector]
+          val result    = connector.getAllBoxes
+
+          await(
+            result
+              .map {
+                _ => fail("This should not succeed")
+              }
+              .recover {
+                case UpstreamErrorResponse(_, INTERNAL_SERVER_ERROR, _, _) =>
+              }
+          )
+        }
+      }
+    }
+
     "postNotification" - {
 
       val boxId        = arbitraryBoxId.arbitrary.sample.value
@@ -211,5 +297,7 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           }
         }
     }
+
   }
+
 }
