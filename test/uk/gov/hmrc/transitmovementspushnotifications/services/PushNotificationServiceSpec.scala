@@ -50,7 +50,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   val clientId        = "clientId"
   val boxResponse     = arbitraryBoxResponse.arbitrary.sample.get
-  var boxResponseList = Seq(BoxResponse(BoxId("123")), BoxResponse(BoxId("456")))
+  val boxResponseList = Seq(BoxResponse(BoxId("123")), BoxResponse(BoxId("456")))
 
   lazy val messageId                    = MessageId("message-id-1")
   lazy val movementId                   = arbitraryMovementId.arbitrary.sample.get
