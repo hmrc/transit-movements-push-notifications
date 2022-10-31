@@ -18,7 +18,6 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
@@ -62,8 +61,7 @@ trait ConvertError {
 
     def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
       case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId(msg)   => PresentationError.badRequestError(s"Invalid box id: $msg")
-      case BadRequest(msg)     => PresentationError.internalServerError(msg)
+      case InvalidBoxId        => PresentationError.internalServerError()
       case BoxNotFound(msg)    => PresentationError.notFoundError(msg)
     }
   }

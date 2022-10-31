@@ -55,7 +55,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFact
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
@@ -189,18 +188,14 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(InvalidBoxId(boxAssociation.boxId.value)))
+        .thenReturn(EitherT.leftT(InvalidBoxId))
 
       val request = fakeRequest(POST, validBody)
 
       val result =
         controller.createBoxAssociation(boxAssociation._id)(request)
 
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Invalid box id: 123"
-      )
+      status(result) mustBe INTERNAL_SERVER_ERROR
     }
 
     "must return BAD_REQUEST when clientId, movementType and boxId are not present in the body" in {
@@ -324,34 +319,6 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           controller.postNotification(movementId, messageId)(fakeRequest)
 
         status(result) mustBe NOT_FOUND
-      }
-    }
-
-    "when sending a bad request " - {
-      "should return an internal server error" in {
-
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
-          .thenReturn(EitherT.rightT(boxId))
-
-        when(
-          mockPushPullNotificationService
-            .sendPushNotification(
-              any[String].asInstanceOf[BoxId],
-              any[Option[String]],
-              any[String].asInstanceOf[MovementId],
-              any[String].asInstanceOf[MessageId],
-              any[Source[ByteString, _]]()
-            )(
-              any[ExecutionContext],
-              any[HeaderCarrier],
-              any[Materializer]
-            )
-        ).thenReturn(EitherT.leftT(BadRequest("Bad Request")))
-
-        val result =
-          controller.postNotification(movementId, messageId)(fakeRequest)
-
-        status(result) mustBe INTERNAL_SERVER_ERROR
       }
     }
 

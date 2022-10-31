@@ -113,7 +113,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
 
       whenReady(result.value) {
-        _ mustBe Left(InvalidBoxId("Box id provided does not exist: BoxId(111)"))
+        _ mustBe Left(InvalidBoxId)
       }
     }
 

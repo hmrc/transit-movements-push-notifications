@@ -25,7 +25,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCod
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BadRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
@@ -96,10 +95,9 @@ class ConvertErrorSpec extends SpecBase {
     "for a failure" in {
       val exception = new Exception("PPNS failure")
       Seq(
-        UnexpectedError(Some(exception))    -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
-        InvalidBoxId("box-id-xx")           -> StandardError("Invalid box id: box-id-xx", ErrorCode.BadRequest),
-        BadRequest("Internal server error") -> InternalServiceError("Internal server error", InternalServerError),
-        BoxNotFound("Box not found")        -> StandardError("Box not found", ErrorCode.NotFound)
+        UnexpectedError(Some(exception)) -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
+        InvalidBoxId                     -> InternalServiceError(),
+        BoxNotFound("Box not found")     -> StandardError("Box not found", ErrorCode.NotFound)
       ).foreach {
         ppnsAndPresentationError =>
           val input = Left[PushPullNotificationError, Unit](ppnsAndPresentationError._1).toEitherT[Future]
