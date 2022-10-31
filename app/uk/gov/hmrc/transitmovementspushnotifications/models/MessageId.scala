@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.services.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models
 
-sealed abstract class PushPullNotificationError
+import play.api.libs.json.Json
 
-case class UnexpectedError(thr: Option[Throwable] = None) extends PushPullNotificationError
-case object InvalidBoxId                                  extends PushPullNotificationError
-case class BoxNotFound(message: String)                   extends PushPullNotificationError
+case class MessageId(value: String) extends AnyVal
+
+object MessageId {
+  implicit val messageIdFormat = Json.format[MessageId]
+}

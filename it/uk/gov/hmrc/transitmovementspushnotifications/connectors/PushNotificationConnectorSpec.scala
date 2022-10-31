@@ -18,9 +18,11 @@ package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -28,6 +30,9 @@ import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
 import org.scalatest.time.Span
 import play.api.libs.json.Json
+import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
+import play.api.test.Helpers.BAD_REQUEST
+import play.api.test.Helpers.FORBIDDEN
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.NOT_FOUND
 import play.api.test.Helpers.OK
@@ -38,12 +43,13 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with ScalaFutures with GuiceWiremockSuite with ModelGenerators {
+class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with ScalaFutures with GuiceWiremockSuite with ModelGenerators with OptionValues {
   override protected def portConfigKey: Seq[String] = Seq("microservice.services.push-pull-notifications-api.port")
 
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
@@ -215,6 +221,80 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           )
         }
       }
+    }
+
+    "postNotification" - {
+
+      val boxId        = arbitraryBoxId.arbitrary.sample.value
+      val validPayload = """{"message":"<CC007C>data</CC007C>"}"""
+
+      val messageNotificationWithBody = MessageNotification(
+        messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
+        messageBody = Some(validPayload)
+      )
+
+      val messageNotificationWithoutBody = MessageNotification(
+        messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
+        messageBody = None
+      )
+
+      "when called with a valid message notification with a body and box id that is in the database" - {
+        "should return Unit () when the post is successful" in {
+          server.stubFor {
+            post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
+              aResponse()
+                .withStatus(OK)
+            )
+          }
+
+          val app = applicationBuilder.build()
+          running(app) {
+            val connector = app.injector.instanceOf[PushPullNotificationConnector]
+            whenReady(connector.postNotification(boxId, messageNotificationWithBody)) {
+              _ mustEqual Right((): Unit)
+            }
+          }
+        }
+      }
+
+      "when called with a valid message notification with no body and box id that is in the database" - {
+        "should return Unit () when the post is successful" in {
+          server.stubFor {
+            post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
+              aResponse()
+                .withStatus(OK)
+            )
+          }
+
+          val app = applicationBuilder.build()
+          running(app) {
+            val connector = app.injector.instanceOf[PushPullNotificationConnector]
+            whenReady(connector.postNotification(boxId, messageNotificationWithoutBody)) {
+              _ mustEqual Right((): Unit)
+            }
+          }
+        }
+      }
+
+      for (error <- List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE))
+        "when called with an invalid request" - {
+          s"should return error an error response: $error" in {
+            server.stubFor {
+              post(urlPathEqualTo(s"/box/${boxId.value}/notifications")).willReturn(
+                aResponse()
+                  .withStatus(error)
+              )
+            }
+
+            val app = applicationBuilder.build()
+            running(app) {
+              val connector = app.injector.instanceOf[PushPullNotificationConnector]
+              whenReady(connector.postNotification(boxId, messageNotificationWithBody)) {
+                _.left.get.statusCode mustEqual error
+              }
+            }
+          }
+        }
     }
 
   }

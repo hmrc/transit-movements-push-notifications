@@ -18,11 +18,13 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -58,8 +60,9 @@ trait ConvertError {
   implicit val ppnsErrorConverter = new Converter[PushPullNotificationError] {
 
     def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
-      case PushPullNotificationError.UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId(msg)                             => PresentationError.badRequestError(message = msg)
+      case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
+      case InvalidBoxId        => PresentationError.internalServerError()
+      case BoxNotFound(msg)    => PresentationError.notFoundError(msg)
     }
   }
 

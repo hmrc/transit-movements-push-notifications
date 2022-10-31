@@ -24,9 +24,10 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.InvalidBoxId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -52,9 +53,9 @@ class ConvertErrorSpec extends SpecBase {
     "for a failure" in {
       val exception = new Exception("mongo failure")
       Seq(
-        UnexpectedError(Some(exception))       -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
-        InsertNotAcknowledged("Insert failed") -> InternalServiceError("Insert failed", InternalServerError, None),
-        DocumentNotFound("Movement not found") -> StandardError("Movement not found", ErrorCode.NotFound)
+        MongoError.UnexpectedError(Some(exception)) -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
+        InsertNotAcknowledged("Insert failed")      -> InternalServiceError("Insert failed", InternalServerError, None),
+        DocumentNotFound("Movement not found")      -> StandardError("Movement not found", ErrorCode.NotFound)
       ).foreach {
         mongoAndPresentationError =>
           val input = Left[MongoError, Unit](mongoAndPresentationError._1).toEitherT[Future]
@@ -94,8 +95,9 @@ class ConvertErrorSpec extends SpecBase {
     "for a failure" in {
       val exception = new Exception("PPNS failure")
       Seq(
-        PushPullNotificationError.UnexpectedError(Some(exception)) -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
-        InvalidBoxId("Box id does not exist")                      -> StandardError("Box id does not exist", ErrorCode.BadRequest)
+        UnexpectedError(Some(exception)) -> InternalServiceError("Internal server error", InternalServerError, Some(exception)),
+        InvalidBoxId                     -> InternalServiceError(),
+        BoxNotFound("Box not found")     -> StandardError("Box not found", ErrorCode.NotFound)
       ).foreach {
         ppnsAndPresentationError =>
           val input = Left[PushPullNotificationError, Unit](ppnsAndPresentationError._1).toEitherT[Future]

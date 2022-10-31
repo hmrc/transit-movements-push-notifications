@@ -28,6 +28,8 @@ trait BaseConnector {
 
   val getBoxRoute = UrlPath.parse("/box")
 
+  def getNotificationsRoute(boxId: String): UrlPath = UrlPath.parse(s"/box/$boxId/notifications")
+
   implicit class HttpResponseHelpers(response: HttpResponse) {
 
     def as[A](implicit reads: Reads[A]): Future[A] =

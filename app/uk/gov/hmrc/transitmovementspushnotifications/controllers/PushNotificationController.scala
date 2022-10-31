@@ -16,16 +16,23 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import cats.data.EitherT
+import play.api.http.HeaderNames
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import play.api.libs.streams.Accumulator
 import play.api.mvc.Action
+import play.api.mvc.BodyParser
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
@@ -44,9 +51,22 @@ class PushNotificationController @Inject() (
   boxAssociationRepository: BoxAssociationRepository,
   boxAssociationFactory: BoxAssociationFactory
 )(implicit
-  ec: ExecutionContext
+  ec: ExecutionContext,
+  mat: Materializer
 ) extends BackendController(cc)
     with ConvertError {
+
+  def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
+    implicit request =>
+      val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
+      (for {
+        boxId  <- boxAssociationRepository.getBoxId(movementId).asPresentation
+        result <- pushPullNotificationService.sendPushNotification(boxId, contentLength, movementId, messageId, request.body).asPresentation
+      } yield result).fold[Result](
+        baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
+        _ => Accepted
+      )
+  }
 
   def createBoxAssociation(movementId: MovementId): Action[JsValue] = Action.async(parse.json) {
     implicit request =>
@@ -67,5 +87,10 @@ class PushNotificationController @Inject() (
       case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
       case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId and movementType to be present in the body"))
     }
+
+  private lazy val streamFromMemory: BodyParser[Source[ByteString, _]] = BodyParser {
+    _ =>
+      Accumulator.source[ByteString].map(Right.apply)
+  }
 
 }

@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import akka.util.Timeout
 import cats.data.EitherT
 import org.mockito.Mockito.reset
@@ -24,9 +27,11 @@ import uk.gov.hmrc.http.HttpVerbs.POST
 import org.mockito.ArgumentMatchers.any
 import play.api.http.HeaderNames
 import play.api.http.MimeTypes
+import play.api.http.Status.ACCEPTED
 import play.api.http.Status.BAD_REQUEST
 import play.api.http.Status.CREATED
 import play.api.http.Status.INTERNAL_SERVER_ERROR
+import play.api.http.Status.NOT_FOUND
 import play.api.mvc.Request
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -41,6 +46,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
@@ -48,9 +54,11 @@ import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
 
-import java.time.OffsetDateTime
+import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -63,13 +71,13 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   val mockMovementBoxAssociationRepository = mock[BoxAssociationRepository]
   val mockMovementBoxAssociationFactory    = mock[BoxAssociationFactory]
 
-  val now = OffsetDateTime.now
-
   lazy val boxAssociationRequest = arbitraryBoxAssociationRequest.arbitrary.sample.get.copy(boxId = Some(BoxId("123")))
 
   lazy val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get.copy(boxId = boxAssociationRequest.boxId.value)
 
-  lazy val boxId: BoxId = boxAssociationRequest.boxId.value
+  lazy val boxId: BoxId           = boxAssociationRequest.boxId.value
+  lazy val movementId: MovementId = arbitraryMovementId.arbitrary.sample.value
+  lazy val messageId: MessageId   = MessageId("message-id-1")
 
   def fakeRequest[A](
     method: String,
@@ -180,18 +188,14 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return BAD_REQUEST when boxId provided does not exist" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PushPullNotificationError.InvalidBoxId(s"Box id provided does not exist: ${boxAssociation.boxId.value}")))
+        .thenReturn(EitherT.leftT(InvalidBoxId))
 
       val request = fakeRequest(POST, validBody)
 
       val result =
         controller.createBoxAssociation(boxAssociation._id)(request)
 
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Box id provided does not exist: 123"
-      )
+      status(result) mustBe INTERNAL_SERVER_ERROR
     }
 
     "must return BAD_REQUEST when clientId, movementType and boxId are not present in the body" in {
@@ -211,7 +215,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "must return INTERNAL_SERVER_ERROR when there's an unexpected PPNS failure" in {
 
       when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
+        .thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception("error")))))
 
       val request = fakeRequest(POST, validBody)
 
@@ -248,4 +252,104 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       )
     }
   }
+
+  "postNotification" - {
+
+    val validBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
+
+    implicit val fakeRequest = FakeRequest(
+      method = POST,
+      uri = routes.PushNotificationController
+        .postNotification(movementId, messageId)
+        .url,
+      headers = FakeHeaders(),
+      body = validBody
+    )
+
+    "when called with a movement id, message id for which a box id is in the database" - {
+      "should be successfully posted and return Unit ()" in {
+
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
+          .thenReturn(EitherT.rightT(boxId))
+
+        when(
+          mockPushPullNotificationService
+            .sendPushNotification(
+              any[String].asInstanceOf[BoxId],
+              any[Option[String]],
+              any[String].asInstanceOf[MovementId],
+              any[String].asInstanceOf[MessageId],
+              any[Source[ByteString, _]]()
+            )(
+              any[ExecutionContext],
+              any[HeaderCarrier],
+              any[Materializer]
+            )
+        ).thenReturn(EitherT.rightT(()))
+
+        val result =
+          controller.postNotification(movementId, messageId)(fakeRequest)
+
+        status(result) mustBe ACCEPTED
+      }
+    }
+
+    "when called with a movement id for which there is no box id " - {
+      "should return box not found error" in {
+
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
+          .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
+
+        when(
+          mockPushPullNotificationService
+            .sendPushNotification(
+              any[String].asInstanceOf[BoxId],
+              any[Option[String]],
+              any[String].asInstanceOf[MovementId],
+              any[String].asInstanceOf[MessageId],
+              any[Source[ByteString, _]]()
+            )(
+              any[ExecutionContext],
+              any[HeaderCarrier],
+              any[Materializer]
+            )
+        ).thenReturn(EitherT.rightT(()))
+
+        val result =
+          controller.postNotification(movementId, messageId)(fakeRequest)
+
+        status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "when receiving an unexpected error" - {
+      "should return an internal server error" in {
+
+        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
+          .thenReturn(EitherT.rightT(boxId))
+
+        when(
+          mockPushPullNotificationService
+            .sendPushNotification(
+              any[String].asInstanceOf[BoxId],
+              any[Option[String]],
+              any[String].asInstanceOf[MovementId],
+              any[String].asInstanceOf[MessageId],
+              any[Source[ByteString, _]]()
+            )(
+              any[ExecutionContext],
+              any[HeaderCarrier],
+              any[Materializer]
+            )
+        ).thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception(s"Unexpected error")))))
+
+        val result =
+          controller.postNotification(movementId, messageId)(fakeRequest)
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+      }
+    }
+
+  }
+
 }

@@ -31,8 +31,11 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
 
+import java.time.Clock
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,7 +51,8 @@ class BoxAssociationRepositorySpec
     with ModelGenerators
     with OptionValues {
 
-  val instant: OffsetDateTime = OffsetDateTime.of(2022, 5, 25, 16, 0, 0, 0, ZoneOffset.UTC)
+  val lastUpdated: OffsetDateTime = OffsetDateTime.of(2022, 10, 17, 9, 1, 2, 0, ZoneOffset.UTC)
+  val clock: Clock                = Clock.fixed(lastUpdated.toInstant, ZoneOffset.UTC)
 
   override lazy val mongoComponent: MongoComponent = {
     val databaseName: String = "test-box_association"
@@ -59,7 +63,7 @@ class BoxAssociationRepositorySpec
   implicit lazy val app: Application = GuiceApplicationBuilder().configure().build()
   private val appConfig              = app.injector.instanceOf[AppConfig]
 
-  override lazy val repository = new BoxAssociationRepositoryImpl(appConfig, mongoComponent)
+  override lazy val repository = new BoxAssociationRepositoryImpl(appConfig, mongoComponent, clock)
 
   "BoxAssociationRepository" should "have the correct name" in {
     repository.collectionName shouldBe "box_association"
@@ -82,7 +86,7 @@ class BoxAssociationRepositorySpec
     firstItem._id.value should be(boxAssociation._id.value)
   }
 
-  "insert" should "add the given box  to the database" in {
+  "insert" should "add the given box to the database" in {
 
     val firstInsert = await(
       repository.insert(boxAssociation).value
@@ -99,4 +103,31 @@ class BoxAssociationRepositorySpec
       case _                              => fail("Excepted UnexpectedError")
     }
   }
+
+  "getBoxId" should "retrieve the box id for an existing movementId and update the timestamp" in {
+
+    val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get
+
+    val insertBox = await(
+      repository.insert(boxAssociation).value
+    )
+
+    insertBox should be(Right(()))
+
+    val result = await(
+      repository.getBoxId(boxAssociation._id).value
+    )
+
+    result should be(Right(boxAssociation.boxId))
+  }
+
+  "getBoxId" should "return a DocumentNotFound error for a movementId that is not in the database" in {
+    val unknownMovementId = MovementId("Unknown Movement Id")
+    val result = await(
+      repository.getBoxId(unknownMovementId).value
+    )
+
+    result should be(Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${unknownMovementId.value}")))
+  }
+
 }
