@@ -251,7 +251,7 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           running(app) {
             val connector = app.injector.instanceOf[PushPullNotificationConnector]
             whenReady(connector.postNotification(boxId, messageNotificationWithBody)) {
-              _ mustEqual Right((): Unit)
+              _ mustEqual Right(())
             }
           }
         }
@@ -270,7 +270,7 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
           running(app) {
             val connector = app.injector.instanceOf[PushPullNotificationConnector]
             whenReady(connector.postNotification(boxId, messageNotificationWithoutBody)) {
-              _ mustEqual Right((): Unit)
+              _ mustEqual Right(())
             }
           }
         }
@@ -290,7 +290,8 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
             running(app) {
               val connector = app.injector.instanceOf[PushPullNotificationConnector]
               whenReady(connector.postNotification(boxId, messageNotificationWithBody)) {
-                _.left.get.statusCode mustEqual error
+                case Left(value)  => value.statusCode mustEqual error
+                case Right(value) => fail(s"There must not be a Right (got $value instead)")
               }
             }
           }

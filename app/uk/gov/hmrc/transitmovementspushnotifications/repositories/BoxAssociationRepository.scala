@@ -47,7 +47,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[BoxAssociationRepositoryImpl])
 trait BoxAssociationRepository {
   def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit]
-  def getBoxId(movementId: MovementId): EitherT[Future, MongoError, BoxId]
+  def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation]
 }
 
 @Singleton
@@ -102,17 +102,14 @@ class BoxAssociationRepositoryImpl @Inject() (
         Future.successful(Left(UnexpectedError(Some(ex))))
     })
 
-  override def getBoxId(movementId: MovementId): EitherT[Future, MongoError, BoxId] = {
+  override def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation] = {
     val setUpdated = mSet("updated", OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC))
     mongoRetry(Try(collection.findOneAndUpdate(mEq(movementId), setUpdated).headOption()) match {
       case Success(fOptBox) =>
-        fOptBox.map(
-          optBox =>
-            optBox match {
-              case Some(box) => Right(box.boxId)
-              case None      => Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}"))
-            }
-        )
+        fOptBox.map {
+          case Some(box) => Right(box)
+          case None      => Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}"))
+        }
       case Failure(ex) => Future.successful(Left(UnexpectedError(Some(ex))))
     })
   }

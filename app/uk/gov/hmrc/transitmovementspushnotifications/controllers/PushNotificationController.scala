@@ -60,8 +60,8 @@ class PushNotificationController @Inject() (
     implicit request =>
       val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
       (for {
-        boxId  <- boxAssociationRepository.getBoxId(movementId).asPresentation
-        result <- pushPullNotificationService.sendPushNotification(boxId, contentLength, movementId, messageId, request.body).asPresentation
+        boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
+        result         <- pushPullNotificationService.sendPushNotification(boxAssociation, contentLength, messageId, request.body).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
         _ => Accepted
@@ -72,7 +72,7 @@ class PushNotificationController @Inject() (
     implicit request =>
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
-        boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
+        boxId          <- pushPullNotificationService.getBoxAssociation(boxAssociation).asPresentation
         movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
