@@ -133,7 +133,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       validBody
     ) {
       (boxAssociation, body) =>
-        when(mockPushPullNotificationService.getBoxAssociation(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
         when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
@@ -155,7 +155,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       invalidMovementTypeBody
     ) {
       (boxAssociation, body) =>
-        when(mockPushPullNotificationService.getBoxAssociation(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
         when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
@@ -181,7 +181,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       invalidBodyWithoutClientId
     ) {
       (boxAssociation, body) =>
-        when(mockPushPullNotificationService.getBoxAssociation(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
         when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
@@ -207,7 +207,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       validBody
     ) {
       (boxAssociation, body) =>
-        when(mockPushPullNotificationService.getBoxAssociation(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT(InvalidBoxId))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
@@ -239,7 +239,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       validBody
     ) {
       (boxAssociation, body) =>
-        when(mockPushPullNotificationService.getBoxAssociation(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception("error")))))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
@@ -259,7 +259,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       validBody
     ) {
       (boxAssociation, body) =>
-        when(mockPushPullNotificationService.getBoxAssociation(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
         when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))

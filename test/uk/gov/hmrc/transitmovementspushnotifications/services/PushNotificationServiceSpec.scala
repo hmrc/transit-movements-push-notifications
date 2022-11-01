@@ -74,7 +74,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.successful(boxResponse))
 
-        val result = sut.getBoxAssociation(boxAssociationRequest)
+        val result = sut.getBoxId(boxAssociationRequest)
 
         whenReady(result.value) {
           _ mustBe Right(boxResponse.boxId)
@@ -91,7 +91,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.failed(exception))
 
-        val result = sut.getBoxAssociation(boxAssociationRequest)
+        val result = sut.getBoxId(boxAssociationRequest)
 
         whenReady(result.value) {
           _ mustBe Left(UnexpectedError(Some(exception)))
@@ -109,7 +109,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.successful(response))
 
-        val result = sut.getBoxAssociation(boxAssociationRequestWithBoxId)
+        val result = sut.getBoxId(boxAssociationRequestWithBoxId)
 
         whenReady(result.value) {
           _ mustBe Right(boxId)
@@ -127,7 +127,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.successful(boxResponse))
 
-        val result = sut.getBoxAssociation(boxAssociationRequestWithInvalidBoxId)
+        val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
 
         whenReady(result.value) {
           _ mustBe Left(InvalidBoxId)

@@ -72,7 +72,7 @@ class PushNotificationController @Inject() (
     implicit request =>
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
-        boxId          <- pushPullNotificationService.getBoxAssociation(boxAssociation).asPresentation
+        boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
         movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](

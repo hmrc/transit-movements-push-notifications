@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[PushPullNotificationServiceImpl])
 trait PushPullNotificationService {
 
-  def getBoxAssociation(
+  def getBoxId(
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
@@ -55,7 +55,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     extends PushPullNotificationService
     with ConvertError {
 
-  override def getBoxAssociation(
+  override def getBoxId(
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     boxAssociationRequest match {
