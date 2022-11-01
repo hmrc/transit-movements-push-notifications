@@ -104,7 +104,7 @@ class BoxAssociationRepositorySpec
     }
   }
 
-  "getBoxId" should "retrieve the box id for an existing movementId and update the timestamp" in {
+  "getBoxAssociation" should "retrieve the box association an existing movementId and update the timestamp" in {
 
     val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get
 
@@ -115,16 +115,16 @@ class BoxAssociationRepositorySpec
     insertBox should be(Right(()))
 
     val result = await(
-      repository.getBoxId(boxAssociation._id).value
+      repository.getBoxAssociation(boxAssociation._id).value
     )
 
-    result should be(Right(boxAssociation.boxId))
+    result should be(Right(boxAssociation))
   }
 
-  "getBoxId" should "return a DocumentNotFound error for a movementId that is not in the database" in {
+  "getBoxAssociation" should "return a DocumentNotFound error for a movementId that is not in the database" in {
     val unknownMovementId = MovementId("Unknown Movement Id")
     val result = await(
-      repository.getBoxId(unknownMovementId).value
+      repository.getBoxAssociation(unknownMovementId).value
     )
 
     result should be(Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${unknownMovementId.value}")))

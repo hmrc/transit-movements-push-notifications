@@ -60,8 +60,8 @@ class PushNotificationController @Inject() (
     implicit request =>
       val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
       (for {
-        boxId  <- boxAssociationRepository.getBoxId(movementId).asPresentation
-        result <- pushPullNotificationService.sendPushNotification(boxId, contentLength, movementId, messageId, request.body).asPresentation
+        boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
+        result         <- pushPullNotificationService.sendPushNotification(boxAssociation, contentLength, messageId, request.body).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
         _ => Accepted

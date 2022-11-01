@@ -31,7 +31,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
 
-import java.net.URI
 import javax.inject._
 import scala.concurrent._
 import scala.util.control.NonFatal
@@ -43,7 +42,7 @@ trait PushPullNotificationService {
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
-  def sendPushNotification(boxId: BoxId, contentLength: Option[String], movementId: MovementId, messageId: MessageId, body: Source[ByteString, _])(implicit
+  def sendPushNotification(boxAssociation: BoxAssociation, contentLength: Option[String], messageId: MessageId, body: Source[ByteString, _])(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     mat: Materializer
@@ -63,6 +62,45 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
       case BoxAssociationRequest(_, _, Some(boxId)) => checkBoxIdExists(boxId)
       case BoxAssociationRequest(clientId, _, None) => getDefaultBoxId(clientId)
     }
+
+  override def sendPushNotification(
+    boxAssociation: BoxAssociation,
+    contentLength: Option[String],
+    messageId: MessageId,
+    body: Source[ByteString, _]
+  )(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier,
+    mat: Materializer
+  ): EitherT[Future, PushPullNotificationError, Unit] = {
+
+    lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
+
+    EitherT(
+      contentLength
+        .flatMap(_.toIntOption)
+        .filter(_ <= appConfig.maxPushPullPayloadSize)
+        .map {
+          _ =>
+            body
+              .reduce(_ ++ _)
+              .map(_.utf8String)
+              .runWith(Sink.headOption)
+        }
+        .getOrElse(Future.successful(None))
+        .flatMap(
+          body => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, body))
+        )
+        .map {
+          case Right(_) => Right(())
+          case Left(error) =>
+            error.statusCode match {
+              case NOT_FOUND => Left(BoxNotFound(boxAssociation.boxId.value))
+              case _         => Left(UnexpectedError(Some(error)))
+            }
+        }
+    )
+  }
 
   private def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     EitherT(
@@ -94,64 +132,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
 
-  private def payloadExceedsLimit(contentLength: Option[String]): Boolean = {
-    val maybeSize: Option[Int] = contentLength.flatMap(
-      str => str.toIntOption
-    )
-    if (maybeSize.getOrElse(0) > appConfig.maxPushPullPayloadSize) true else false
-  }
-
-  private def determinePayload(contentLength: Option[String], body: Source[ByteString, _])(implicit
-    ec: ExecutionContext,
-    mat: Materializer
-  ): Future[Option[String]] =
-    if (payloadExceedsLimit(contentLength))
-      Future.successful(None)
-    else
-      bodyToString(body).map(
-        str => Some(str)
-      )
-
-  private def buildUriAsStream(movementId: MovementId, messageId: MessageId): String =
-    (new URI(
-      s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}"
-    )).toString
-
-  private def bodyToString(body: Source[ByteString, _])(implicit mat: Materializer): Future[String] =
-    body
-      .reduce(_ ++ _)
-      .map(_.utf8String)
-      .runWith(Sink.head)
-
-  override def sendPushNotification(
-    boxId: BoxId,
-    contentLength: Option[String],
-    movementId: MovementId,
-    messageId: MessageId,
-    body: Source[ByteString, _]
-  )(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier,
-    mat: Materializer
-  ): EitherT[Future, PushPullNotificationError, Unit] = {
-
-    lazy val uri     = buildUriAsStream(movementId, messageId)
-    lazy val payload = determinePayload(contentLength, body)
-
-    EitherT(
-      payload
-        .flatMap(
-          body => pushPullNotificationConnector.postNotification(boxId, MessageNotification(uri, body))
-        )
-        .map {
-          case Right(_) => Right((): Unit)
-          case Left(error) =>
-            error.statusCode match {
-              case NOT_FOUND => Left(BoxNotFound(boxId.value))
-              case _         => Left(UnexpectedError(Some(error)))
-            }
-        }
-    )
-  }
+  private def buildUriAsString(movementId: MovementId, messageId: MessageId, movementType: MovementType): String =
+    s"/customs/transits/movements/${movementType.urlFragment}/${movementId.value}/messages/${messageId.value}"
 
 }

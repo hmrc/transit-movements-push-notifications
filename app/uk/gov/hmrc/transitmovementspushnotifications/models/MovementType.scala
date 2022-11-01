@@ -18,11 +18,11 @@ package uk.gov.hmrc.transitmovementspushnotifications.models
 
 import play.api.libs.json._
 
-sealed abstract class MovementType(val movementType: String)
+sealed abstract class MovementType(val movementType: String, val urlFragment: String)
 
 object MovementType {
-  case object Departure extends MovementType("departure")
-  case object Arrival   extends MovementType("arrival")
+  case object Departure extends MovementType("departure", "departures")
+  case object Arrival   extends MovementType("arrival", "arrivals")
 
   implicit val movementTypeReads: Reads[MovementType] = Reads {
     case x: JsString => MovementType.findByName(x.value).map(JsSuccess(_)).getOrElse(JsError())

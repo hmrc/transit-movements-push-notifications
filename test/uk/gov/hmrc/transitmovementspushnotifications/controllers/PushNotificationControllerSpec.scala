@@ -25,6 +25,10 @@ import org.mockito.Mockito.reset
 import org.mockito.Mockito.when
 import uk.gov.hmrc.http.HttpVerbs.POST
 import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{eq => eqTo}
+import org.scalacheck.Arbitrary.arbitrary
+import org.scalacheck.Gen
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.http.HeaderNames
 import play.api.http.MimeTypes
 import play.api.http.Status.ACCEPTED
@@ -63,7 +67,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
-class PushNotificationControllerSpec extends SpecBase with ModelGenerators with TestActorSystem {
+class PushNotificationControllerSpec extends SpecBase with ModelGenerators with TestActorSystem with ScalaCheckDrivenPropertyChecks {
 
   implicit val timeout: Timeout = 5.seconds
 
@@ -71,21 +75,14 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   val mockMovementBoxAssociationRepository = mock[BoxAssociationRepository]
   val mockMovementBoxAssociationFactory    = mock[BoxAssociationFactory]
 
-  lazy val boxAssociationRequest = arbitraryBoxAssociationRequest.arbitrary.sample.get.copy(boxId = Some(BoxId("123")))
-
-  lazy val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get.copy(boxId = boxAssociationRequest.boxId.value)
-
-  lazy val boxId: BoxId           = boxAssociationRequest.boxId.value
-  lazy val movementId: MovementId = arbitraryMovementId.arbitrary.sample.value
-  lazy val messageId: MessageId   = MessageId("message-id-1")
-
   def fakeRequest[A](
+    movementId: MovementId,
     method: String,
     body: JsValue
   ): Request[JsValue] =
     FakeRequest(
       method = method,
-      uri = routes.PushNotificationController.createBoxAssociation(boxAssociation._id).url,
+      uri = routes.PushNotificationController.createBoxAssociation(movementId).url,
       headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)),
       body = body
     )
@@ -106,150 +103,181 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   "createBoxAssociation" - {
 
-    val validBody: JsValue = Json.obj(
-      "clientId"     -> boxAssociationRequest.clientId,
-      "movementType" -> "arrival"
-    )
-
-    val invalidMovementTypeBody: JsValue = Json.obj(
-      "clientId"     -> boxAssociationRequest.clientId,
-      "movementType" -> "abc"
-    )
-
-    val invalidBodyWithoutClientId: JsValue = Json.obj(
-      "movementType" -> "arrival"
-    )
-
-    "must return Created if successfully inserts box association" in {
-
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.rightT(boxId))
-
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
-        .thenReturn(boxAssociation)
-
-      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
-        .thenReturn(EitherT.rightT(Right(())))
-
-      val request = fakeRequest(POST, validBody)
-
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
-
-      status(result) mustBe CREATED
-    }
-
-    "must return BAD_REQUEST when invalid movementType provided in body" in {
-
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.rightT(boxId))
-
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
-        .thenReturn(boxAssociation)
-
-      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
-        .thenReturn(EitherT.rightT(Right(())))
-
-      val request = fakeRequest(POST, invalidMovementTypeBody)
-
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
-
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Expected clientId and movementType to be present in the body"
+    val validBody: Gen[JsValue] =
+      for {
+        clientId     <- Gen.alphaNumStr
+        movementType <- Gen.oneOf(MovementType.values)
+      } yield Json.obj(
+        "clientId"     -> clientId,
+        "movementType" -> movementType.movementType
       )
-    }
 
-    "must return BAD_REQUEST when clientId or movementType or both are missing in body" in {
-
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.rightT(boxId))
-
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
-        .thenReturn(boxAssociation)
-
-      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
-        .thenReturn(EitherT.rightT(Right(())))
-
-      val request = fakeRequest(POST, invalidBodyWithoutClientId)
-
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
-
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Expected clientId and movementType to be present in the body"
+    val invalidMovementTypeBody: Gen[JsValue] =
+      for {
+        clientId     <- Gen.alphaNumStr
+        movementType <- Gen.hexStr
+      } yield Json.obj(
+        "clientId"     -> clientId,
+        "movementType" -> movementType
       )
-    }
 
-    "must return BAD_REQUEST when boxId provided does not exist" in {
-
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(InvalidBoxId))
-
-      val request = fakeRequest(POST, validBody)
-
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
-
-      status(result) mustBe INTERNAL_SERVER_ERROR
-    }
-
-    "must return BAD_REQUEST when clientId, movementType and boxId are not present in the body" in {
-
-      val request = fakeRequest(POST, Json.obj())
-
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
-
-      status(result) mustBe BAD_REQUEST
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "BAD_REQUEST",
-        "message" -> "Expected clientId and movementType to be present in the body"
+    val invalidBodyWithoutClientId: Gen[JsValue] =
+      for {
+        movementType <- Gen.oneOf(MovementType.values)
+      } yield Json.obj(
+        "movementType" -> movementType.movementType
       )
+
+    "must return Created if successfully inserts box association" in forAll(
+      arbitrary[BoxAssociation],
+      validBody
+    ) {
+      (boxAssociation, body) =>
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(EitherT.rightT(boxAssociation.boxId))
+
+        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
+          .thenReturn(boxAssociation)
+
+        when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
+          .thenReturn(EitherT.rightT(Right(())))
+
+        val request = fakeRequest(boxAssociation._id, POST, body)
+
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
+
+        status(result) mustBe CREATED
     }
 
-    "must return INTERNAL_SERVER_ERROR when there's an unexpected PPNS failure" in {
+    "must return BAD_REQUEST when invalid movementType provided in body" in forAll(
+      arbitrary[BoxAssociation],
+      invalidMovementTypeBody
+    ) {
+      (boxAssociation, body) =>
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception("error")))))
+        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
+          .thenReturn(boxAssociation)
 
-      val request = fakeRequest(POST, validBody)
+        when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
+          .thenReturn(EitherT.rightT(Right(())))
 
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
+        val request = fakeRequest(boxAssociation._id, POST, body)
 
-      status(result) mustBe INTERNAL_SERVER_ERROR
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "INTERNAL_SERVER_ERROR",
-        "message" -> "Internal server error"
-      )
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
+
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "BAD_REQUEST",
+          "message" -> "Expected clientId and movementType to be present in the body"
+        )
     }
 
-    "must return INTERNAL_SERVER_ERROR if there's a mongo failure when inserting box association" in {
+    "must return BAD_REQUEST when clientId or movementType or both are missing in body" in forAll(
+      arbitrary[BoxAssociation],
+      invalidBodyWithoutClientId
+    ) {
+      (boxAssociation, body) =>
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
-      when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-        .thenReturn(EitherT.rightT(boxId))
+        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
+          .thenReturn(boxAssociation)
 
-      when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
-        .thenReturn(boxAssociation)
+        when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
+          .thenReturn(EitherT.rightT(Right(())))
 
-      when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
-        .thenReturn(EitherT.leftT(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id}")))
+        val request = fakeRequest(boxAssociation._id, POST, body)
 
-      val request = fakeRequest(POST, validBody)
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
 
-      val result =
-        controller.createBoxAssociation(boxAssociation._id)(request)
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "BAD_REQUEST",
+          "message" -> "Expected clientId and movementType to be present in the body"
+        )
+    }
 
-      status(result) mustBe INTERNAL_SERVER_ERROR
-      contentAsJson(result) mustBe Json.obj(
-        "code"    -> "INTERNAL_SERVER_ERROR",
-        "message" -> s"Insert failed for movement ${boxAssociation._id}"
-      )
+    "must return BAD_REQUEST when boxId provided does not exist" in forAll(
+      arbitrary[BoxAssociation],
+      validBody
+    ) {
+      (boxAssociation, body) =>
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(EitherT.leftT(InvalidBoxId))
+
+        val request = fakeRequest(boxAssociation._id, POST, body)
+
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+    }
+
+    "must return BAD_REQUEST when clientId, movementType and boxId are not present in the body" in forAll(
+      arbitrary[BoxAssociation]
+    ) {
+      boxAssociation =>
+        val request = fakeRequest(boxAssociation._id, POST, Json.obj())
+
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
+
+        status(result) mustBe BAD_REQUEST
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "BAD_REQUEST",
+          "message" -> "Expected clientId and movementType to be present in the body"
+        )
+    }
+
+    "must return INTERNAL_SERVER_ERROR when there's an unexpected PPNS failure" in forAll(
+      arbitrary[BoxAssociation],
+      validBody
+    ) {
+      (boxAssociation, body) =>
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception("error")))))
+
+        val request = fakeRequest(boxAssociation._id, POST, body)
+
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "INTERNAL_SERVER_ERROR",
+          "message" -> "Internal server error"
+        )
+    }
+
+    "must return INTERNAL_SERVER_ERROR if there's a mongo failure when inserting box association" in forAll(
+      arbitrary[BoxAssociation],
+      validBody
+    ) {
+      (boxAssociation, body) =>
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(EitherT.rightT(boxAssociation.boxId))
+
+        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
+          .thenReturn(boxAssociation)
+
+        when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
+          .thenReturn(EitherT.leftT(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id}")))
+
+        val request = fakeRequest(boxAssociation._id, POST, body)
+
+        val result =
+          controller.createBoxAssociation(boxAssociation._id)(request)
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "INTERNAL_SERVER_ERROR",
+          "message" -> s"Insert failed for movement ${boxAssociation._id}"
+        )
     }
   }
 
@@ -257,96 +285,93 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     val validBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
 
-    implicit val fakeRequest = FakeRequest(
+    def fakeRequest(boxAssociation: BoxAssociation, messageId: MessageId) = FakeRequest(
       method = POST,
       uri = routes.PushNotificationController
-        .postNotification(movementId, messageId)
+        .postNotification(boxAssociation._id, messageId)
         .url,
       headers = FakeHeaders(),
       body = validBody
     )
 
     "when called with a movement id, message id for which a box id is in the database" - {
-      "should be successfully posted and return Unit ()" in {
+      "should be successfully posted and return Unit ()" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
+        (boxAssociation, messageId) =>
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+            .thenReturn(EitherT.rightT(boxAssociation))
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
-          .thenReturn(EitherT.rightT(boxId))
+          when(
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Option[String]],
+                MessageId(eqTo(messageId.value)),
+                any[Source[ByteString, _]]()
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
+          ).thenReturn(EitherT.rightT(()))
 
-        when(
-          mockPushPullNotificationService
-            .sendPushNotification(
-              any[String].asInstanceOf[BoxId],
-              any[Option[String]],
-              any[String].asInstanceOf[MovementId],
-              any[String].asInstanceOf[MessageId],
-              any[Source[ByteString, _]]()
-            )(
-              any[ExecutionContext],
-              any[HeaderCarrier],
-              any[Materializer]
-            )
-        ).thenReturn(EitherT.rightT(()))
+          val result =
+            controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
 
-        val result =
-          controller.postNotification(movementId, messageId)(fakeRequest)
-
-        status(result) mustBe ACCEPTED
+          status(result) mustBe ACCEPTED
       }
     }
 
     "when called with a movement id for which there is no box id " - {
-      "should return box not found error" in {
+      "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
+        (boxAssociation, messageId) =>
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+            .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
-          .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
+          when(
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Option[String]],
+                MessageId(eqTo(messageId.value)),
+                any[Source[ByteString, _]]()
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
+          ).thenReturn(EitherT.rightT(()))
 
-        when(
-          mockPushPullNotificationService
-            .sendPushNotification(
-              any[String].asInstanceOf[BoxId],
-              any[Option[String]],
-              any[String].asInstanceOf[MovementId],
-              any[String].asInstanceOf[MessageId],
-              any[Source[ByteString, _]]()
-            )(
-              any[ExecutionContext],
-              any[HeaderCarrier],
-              any[Materializer]
-            )
-        ).thenReturn(EitherT.rightT(()))
+          val result =
+            controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
 
-        val result =
-          controller.postNotification(movementId, messageId)(fakeRequest)
-
-        status(result) mustBe NOT_FOUND
+          status(result) mustBe NOT_FOUND
       }
     }
 
     "when receiving an unexpected error" - {
-      "should return an internal server error" in {
+      "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
+        (boxAssociation, messageId) =>
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+            .thenReturn(EitherT.rightT(boxAssociation))
 
-        when(mockMovementBoxAssociationRepository.getBoxId(any[String].asInstanceOf[MovementId]))
-          .thenReturn(EitherT.rightT(boxId))
+          when(
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Option[String]],
+                MessageId(eqTo(messageId.value)),
+                any[Source[ByteString, _]]()
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
+          ).thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception(s"Unexpected error")))))
 
-        when(
-          mockPushPullNotificationService
-            .sendPushNotification(
-              any[String].asInstanceOf[BoxId],
-              any[Option[String]],
-              any[String].asInstanceOf[MovementId],
-              any[String].asInstanceOf[MessageId],
-              any[Source[ByteString, _]]()
-            )(
-              any[ExecutionContext],
-              any[HeaderCarrier],
-              any[Materializer]
-            )
-        ).thenReturn(EitherT.leftT(UnexpectedError(Some(new Exception(s"Unexpected error")))))
+          val result =
+            controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
 
-        val result =
-          controller.postNotification(movementId, messageId)(fakeRequest)
-
-        status(result) mustBe INTERNAL_SERVER_ERROR
+          status(result) mustBe INTERNAL_SERVER_ERROR
       }
     }
 

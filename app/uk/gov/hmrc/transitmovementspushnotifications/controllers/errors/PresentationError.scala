@@ -95,9 +95,3 @@ case class InternalServiceError(
   code: ErrorCode = ErrorCode.InternalServerError,
   cause: Option[Throwable] = None
 ) extends PresentationError
-
-object InternalServiceError {
-
-  def causedBy(cause: Throwable): PresentationError =
-    PresentationError.internalServerError(cause = Some(cause))
-}
