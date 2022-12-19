@@ -77,7 +77,7 @@ class BoxAssociationRepositorySpec
       repository.insert(boxAssociation).value
     )
 
-    result should be(Right(()))
+    result should be(Right(boxAssociation))
 
     val firstItem = await {
       repository.collection.find(Filters.eq("_id", boxAssociation._id.value)).first().toFuture()
@@ -92,7 +92,7 @@ class BoxAssociationRepositorySpec
       repository.insert(boxAssociation).value
     )
 
-    firstInsert should be(Right(()))
+    firstInsert should be(Right(boxAssociation))
 
     val secondInsert = await(
       repository.insert(boxAssociation).value
@@ -112,7 +112,7 @@ class BoxAssociationRepositorySpec
       repository.insert(boxAssociation).value
     )
 
-    insertBox should be(Right(()))
+    insertBox should be(Right(boxAssociation))
 
     val result = await(
       repository.getBoxAssociation(boxAssociation._id).value

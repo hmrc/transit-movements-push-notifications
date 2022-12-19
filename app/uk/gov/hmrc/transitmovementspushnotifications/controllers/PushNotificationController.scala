@@ -35,6 +35,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.Presenta
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
+import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
@@ -77,7 +78,7 @@ class PushNotificationController @Inject() (
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
-        _ => Created
+        result => Created(Json.toJson(BoxResponse(result.boxId)))
       )
   }
 

@@ -46,7 +46,7 @@ import scala.util.control.NonFatal
 
 @ImplementedBy(classOf[BoxAssociationRepositoryImpl])
 trait BoxAssociationRepository {
-  def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit]
+  def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, BoxAssociation]
   def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation]
 }
 
@@ -82,7 +82,7 @@ class BoxAssociationRepositoryImpl @Inject() (
       )
     }
 
-  override def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, Unit] =
+  override def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, BoxAssociation] =
     mongoRetry(Try(collection.insertOne(boxAssociation)) match {
       case Success(obs) =>
         obs
@@ -90,7 +90,7 @@ class BoxAssociationRepositoryImpl @Inject() (
           .map {
             result =>
               if (result.wasAcknowledged()) {
-                Right(())
+                Right(boxAssociation)
               } else {
                 Left(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id.value}"))
               }

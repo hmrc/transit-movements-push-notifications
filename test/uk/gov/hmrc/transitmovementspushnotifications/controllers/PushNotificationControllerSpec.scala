@@ -54,6 +54,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
+import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFactory
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
@@ -140,14 +141,20 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           .thenReturn(boxAssociation)
 
         when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.rightT(Right(())))
+          .thenReturn(EitherT.rightT(boxAssociation))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
+
+        val expectedJson = Json.parse(s"""
+                                        |{
+                                        |  "boxId": "${boxAssociation.boxId.value}"
+                                        |}""".stripMargin)
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
 
         status(result) mustBe CREATED
+        contentAsJson(result) mustBe expectedJson
     }
 
     "must return BAD_REQUEST when invalid movementType provided in body" in forAll(
@@ -162,7 +169,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           .thenReturn(boxAssociation)
 
         when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.rightT(Right(())))
+          .thenReturn(EitherT.rightT(boxAssociation))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
 
@@ -188,7 +195,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           .thenReturn(boxAssociation)
 
         when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.rightT(Right(())))
+          .thenReturn(EitherT.rightT(boxAssociation))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
 
