@@ -45,6 +45,7 @@ import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
+import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.status
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.http.HeaderCarrier
@@ -304,6 +305,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
 
         status(result) mustBe NO_CONTENT
+        contentAsString(result) mustBe ""
     }
 
     "return Internal Server Error when an update failed with an exception" in forAll(arbitrary[MovementId]) {
@@ -318,12 +320,17 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "return Not Found when an update failed because the association does not exist" in forAll(arbitrary[MovementId]) {
       movementId =>
-        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value)))).thenReturn(EitherT.leftT(MongoError.DocumentNotFound("")))
+        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value))))
+          .thenReturn(EitherT.leftT(MongoError.DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}")))
 
         val result =
           controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
 
         status(result) mustBe NOT_FOUND
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "NOT_FOUND",
+          "message" -> s"Could not find BoxAssociation with id: ${movementId.value}"
+        )
     }
 
   }
