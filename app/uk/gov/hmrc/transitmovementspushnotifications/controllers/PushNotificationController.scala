@@ -26,6 +26,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.streams.Accumulator
 import play.api.mvc.Action
+import play.api.mvc.AnyContent
 import play.api.mvc.BodyParser
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
@@ -65,6 +66,16 @@ class PushNotificationController @Inject() (
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
         _ => Accepted
+      )
+  }
+
+  def updateAssociationTTL(movementId: MovementId): Action[AnyContent] = Action.async {
+    boxAssociationRepository
+      .update(movementId)
+      .asPresentation
+      .fold(
+        baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
+        _ => NoContent
       )
   }
 

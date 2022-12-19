@@ -17,10 +17,12 @@
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
 import org.mongodb.scala.model.Filters
+import org.scalacheck.Arbitrary.arbitrary
 import org.scalatest.OptionValues
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Application
 import play.api.Logging
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -43,8 +45,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class BoxAssociationRepositorySpec
     extends AnyFlatSpec
     with Matchers
-    with ScalaCheckPropertyChecks
+    with ScalaCheckDrivenPropertyChecks
     with FutureAwaits
+    with ScalaFutures
     with DefaultAwaitTimeout
     with Logging
     with DefaultPlayMongoRepositorySupport[BoxAssociation]
@@ -102,6 +105,27 @@ class BoxAssociationRepositorySpec
       case Left(UnexpectedError(Some(_))) =>
       case _                              => fail("Excepted UnexpectedError")
     }
+  }
+
+  "update" should "return a DocumentNotFound error if it tries to update the timestamp of a non-existent movement" in forAll(arbitrary[MovementId]) {
+    movementId =>
+      whenReady(repository.update(movementId).value) {
+        result => result should be(Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}")))
+      }
+  }
+
+  it should "return a Unit if it updates the timestamp of a movement that exists" in forAll(arbitrary[BoxAssociation]) {
+    originalAssociation =>
+      val eitherResult = for {
+        _           <- repository.insert(originalAssociation)
+        _           <- repository.update(originalAssociation._id)
+        afterUpdate <- repository.getBoxAssociation(originalAssociation._id)
+      } yield afterUpdate
+
+      whenReady(eitherResult.value) {
+        case Right(updateResult) => updateResult.updated should be(lastUpdated)
+        case Left(_)             => fail("A left was not expected")
+      }
   }
 
   "getBoxAssociation" should "retrieve the box association an existing movementId and update the timestamp" in {
