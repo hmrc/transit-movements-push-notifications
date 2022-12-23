@@ -150,10 +150,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
         val request = fakeRequest(boxAssociation._id, POST, body)
 
-        val expectedJson = Json.parse(s"""
-                                        |{
-                                        |  "boxId": "${boxAssociation.boxId.value}"
-                                        |}""".stripMargin)
+        val expectedJson = Json.obj("boxId" -> boxAssociation.boxId.value)
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
