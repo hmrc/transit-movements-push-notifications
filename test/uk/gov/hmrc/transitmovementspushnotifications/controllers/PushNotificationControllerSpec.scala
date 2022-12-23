@@ -36,15 +36,20 @@ import play.api.http.Status.BAD_REQUEST
 import play.api.http.Status.CREATED
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.NO_CONTENT
 import play.api.mvc.Request
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import play.api.mvc.AnyContent
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
+import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.status
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpVerbs.PATCH
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
@@ -286,6 +291,55 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           "message" -> s"Insert failed for movement ${boxAssociation._id}"
         )
     }
+  }
+
+  "updateAssociationTTL" - {
+
+    def fakeRequest(movementId: MovementId): FakeRequest[AnyContent] = FakeRequest(
+      method = PATCH,
+      uri = routes.PushNotificationController
+        .updateAssociationTTL(movementId)
+        .url,
+      headers = FakeHeaders(),
+      body = AnyContentAsEmpty
+    )
+
+    "return No Content when an update succeeded" in forAll(arbitrary[MovementId]) {
+      movementId =>
+        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value)))).thenReturn(EitherT.rightT(()))
+
+        val result =
+          controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
+
+        status(result) mustBe NO_CONTENT
+        contentAsString(result) mustBe ""
+    }
+
+    "return Internal Server Error when an update failed with an exception" in forAll(arbitrary[MovementId]) {
+      movementId =>
+        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value)))).thenReturn(EitherT.leftT(MongoError.UnexpectedError()))
+
+        val result =
+          controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+    }
+
+    "return Not Found when an update failed because the association does not exist" in forAll(arbitrary[MovementId]) {
+      movementId =>
+        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value))))
+          .thenReturn(EitherT.leftT(MongoError.DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}")))
+
+        val result =
+          controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
+
+        status(result) mustBe NOT_FOUND
+        contentAsJson(result) mustBe Json.obj(
+          "code"    -> "NOT_FOUND",
+          "message" -> s"Could not find BoxAssociation with id: ${movementId.value}"
+        )
+    }
+
   }
 
   "postNotification" - {

@@ -47,6 +47,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[BoxAssociationRepositoryImpl])
 trait BoxAssociationRepository {
   def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, BoxAssociation]
+  def update(movementId: MovementId): EitherT[Future, MongoError, Unit]
   def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation]
 }
 
@@ -73,6 +74,8 @@ class BoxAssociationRepositoryImpl @Inject() (
     with BoxAssociationRepository
     with Logging
     with CommonFormats {
+
+  private def setUpdated = mSet("updated", OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC))
 
   private def mongoRetry[A](func: Future[Either[MongoError, A]]): EitherT[Future, MongoError, A] =
     EitherT {
@@ -102,8 +105,22 @@ class BoxAssociationRepositoryImpl @Inject() (
         Future.successful(Left(UnexpectedError(Some(ex))))
     })
 
-  override def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation] = {
-    val setUpdated = mSet("updated", OffsetDateTime.ofInstant(clock.instant, ZoneOffset.UTC))
+  override def update(movementId: MovementId): EitherT[Future, MongoError, Unit] =
+    mongoRetry(Try(collection.updateOne(mEq(movementId), setUpdated).head()) match {
+      case Success(fUpdateResult) =>
+        fUpdateResult
+          .filter(_.getModifiedCount > 0)
+          .map(
+            _ => Right(())
+          )
+          .recover {
+            case _: NoSuchElementException => Left(DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}"))
+            case NonFatal(ex)              => Left(UnexpectedError(Some(ex)))
+          }
+      case Failure(ex) => Future.successful(Left(UnexpectedError(Some(ex))))
+    })
+
+  override def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation] =
     mongoRetry(Try(collection.findOneAndUpdate(mEq(movementId), setUpdated).headOption()) match {
       case Success(fOptBox) =>
         fOptBox.map {
@@ -112,6 +129,5 @@ class BoxAssociationRepositoryImpl @Inject() (
         }
       case Failure(ex) => Future.successful(Left(UnexpectedError(Some(ex))))
     })
-  }
 
 }
