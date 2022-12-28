@@ -17,9 +17,9 @@
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
 import akka.util.Timeout
-import org.bouncycastle.util.test.TestFailedException
 import org.mockito.Mockito.when
 import org.scalacheck.Gen
+import org.scalatest.exceptions.TestFailedException
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.libs.json.JsResult
 import play.api.libs.json.Json
