@@ -69,7 +69,8 @@ class BoxAssociationRepositoryImpl @Inject() (
         Codecs.playFormatCodec(MongoFormats.offsetDateTimeFormat),
         Codecs.playFormatCodec(MongoFormats.boxIdFormat),
         Codecs.playFormatCodec(MongoFormats.movementIdFormat)
-      )
+      ),
+      replaceIndexes = true
     )
     with BoxAssociationRepository
     with Logging
