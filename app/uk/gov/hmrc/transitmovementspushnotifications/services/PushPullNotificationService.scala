@@ -63,8 +63,8 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     boxAssociationRequest match {
-      case BoxAssociationRequest(_, _, Some(boxId)) => checkBoxIdExists(boxId)
-      case BoxAssociationRequest(clientId, _, None) => getDefaultBoxId(clientId)
+      case BoxAssociationRequest(clientId, _, Some(boxId)) => checkBoxIdExists(clientId, boxId)
+      case BoxAssociationRequest(clientId, _, None)        => getDefaultBoxId(clientId)
     }
 
   override def sendPushNotification(
@@ -99,8 +99,12 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           case Right(_) => Right(())
           case Left(error) =>
             error.statusCode match {
-              case NOT_FOUND => Left(BoxNotFound(boxAssociation.boxId))
-              case _         => Left(UnexpectedError(Some(error)))
+              case NOT_FOUND =>
+                logger.warn(
+                  s"Attempted to send notification for movement '${boxAssociation._id.value}' to box ID '${boxAssociation.boxId.value}', but the box no longer exists."
+                )
+                Left(BoxNotFound(boxAssociation.boxId))
+              case _ => Left(UnexpectedError(Some(error)))
             }
         }
     )
@@ -121,7 +125,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
 
-  private def checkBoxIdExists(boxId: BoxId)(implicit
+  private def checkBoxIdExists(clientId: String, boxId: BoxId)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): EitherT[Future, PushPullNotificationError, BoxId] =
@@ -129,8 +133,12 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
       pushPullNotificationConnector.getAllBoxes
         .map {
           boxList =>
+            // TODO: We should restrict this to boxes associated to the appropriate client ID
             if (boxList.exists(_.boxId == boxId)) Right(boxId)
-            else Left(BoxNotFound(boxId))
+            else {
+              logger.warn(s"Client ID '$clientId' requested box ID '$boxId', but it did not exist.")
+              Left(BoxNotFound(boxId))
+            }
         }
         .recover {
           case NonFatal(e) =>
