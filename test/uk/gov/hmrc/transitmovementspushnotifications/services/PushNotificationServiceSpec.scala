@@ -42,9 +42,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
@@ -78,6 +76,23 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
         whenReady(result.value) {
           _ mustBe Right(boxResponse.boxId)
+        }
+    }
+
+    "when a default box is not found we return DefaultBoxNotFound" in forAll(
+      arbitrary[BoxAssociationRequest].map(
+        x => x.copy(boxId = None)
+      )
+    ) {
+      boxAssociationRequest =>
+        val exception = UpstreamErrorResponse("error", NOT_FOUND)
+        when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
+          .thenReturn(Future.failed(exception))
+
+        val result = sut.getBoxId(boxAssociationRequest)
+
+        whenReady(result.value) {
+          _ mustBe Left(DefaultBoxNotFound)
         }
     }
 
@@ -116,7 +131,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         }
     }
 
-    "when given a payload with an invalid box id it should return InvalidBoxId" in forAll(
+    "when given a payload with a box id that wasn't found it should return BoxNotFound" in forAll(
       arbitrary[BoxAssociationRequest],
       arbitrary[BoxId],
       Gen.listOf(arbitrary[BoxId].map(BoxResponse(_)))
@@ -130,7 +145,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
 
         whenReady(result.value) {
-          _ mustBe Left(InvalidBoxId)
+          _ mustBe Left(BoxNotFound(boxId))
         }
     }
 
@@ -224,7 +239,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             )
 
             whenReady(result.value) {
-              _ mustBe Left(BoxNotFound(boxAssociation.boxId.value))
+              _ mustBe Left(BoxNotFound(boxAssociation.boxId))
             }
         }
       }

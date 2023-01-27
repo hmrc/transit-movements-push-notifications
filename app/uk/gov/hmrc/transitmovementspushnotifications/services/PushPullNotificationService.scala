@@ -22,14 +22,17 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
 import com.google.inject.ImplementedBy
+import play.api.Logging
 import play.api.http.Status._
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
 import javax.inject._
 import scala.concurrent._
@@ -53,7 +56,8 @@ trait PushPullNotificationService {
 @Singleton
 class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: PushPullNotificationConnector, appConfig: AppConfig)
     extends PushPullNotificationService
-    with ConvertError {
+    with ConvertError
+    with Logging {
 
   override def getBoxId(
     boxAssociationRequest: BoxAssociationRequest
@@ -95,7 +99,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           case Right(_) => Right(())
           case Left(error) =>
             error.statusCode match {
-              case NOT_FOUND => Left(BoxNotFound(boxAssociation.boxId.value))
+              case NOT_FOUND => Left(BoxNotFound(boxAssociation.boxId))
               case _         => Left(UnexpectedError(Some(error)))
             }
         }
@@ -110,8 +114,10 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           boxResponse => Right(boxResponse.boxId)
         }
         .recover {
-          case NonFatal(e) =>
-            Left(UnexpectedError(thr = Some(e)))
+          case UpstreamErrorResponse(_, NOT_FOUND, _, _) =>
+            logger.warn(s"Client ID '$clientId' did not return a default box.")
+            Left(PushPullNotificationError.DefaultBoxNotFound)
+          case NonFatal(e) => Left(UnexpectedError(thr = Some(e)))
         }
     )
 
@@ -124,7 +130,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         .map {
           boxList =>
             if (boxList.exists(_.boxId == boxId)) Right(boxId)
-            else Left(InvalidBoxId)
+            else Left(BoxNotFound(boxId))
         }
         .recover {
           case NonFatal(e) =>

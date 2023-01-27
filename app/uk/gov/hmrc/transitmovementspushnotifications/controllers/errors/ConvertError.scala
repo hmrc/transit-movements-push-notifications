@@ -18,11 +18,9 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
 
 import cats.data.EitherT
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.BoxNotFound
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.InvalidBoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.UnexpectedError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 
@@ -61,8 +59,8 @@ trait ConvertError {
 
     def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
       case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
-      case InvalidBoxId        => PresentationError.internalServerError()
-      case BoxNotFound(msg)    => PresentationError.notFoundError(msg)
+      case DefaultBoxNotFound  => PresentationError.notFoundError("Default box was not found.")
+      case BoxNotFound(id)     => PresentationError.notFoundError(s"Box ID ${id.value} was not found.")
     }
   }
 

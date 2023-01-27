@@ -16,8 +16,15 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services.errors
 
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+
 sealed abstract class PushPullNotificationError
 
-case class UnexpectedError(thr: Option[Throwable] = None) extends PushPullNotificationError
-case object InvalidBoxId                                  extends PushPullNotificationError
-case class BoxNotFound(message: String)                   extends PushPullNotificationError
+object PushPullNotificationError {
+  case class UnexpectedError(thr: Option[Throwable] = None) extends PushPullNotificationError
+
+  case class BoxNotFound(boxId: BoxId) extends PushPullNotificationError
+
+  case object DefaultBoxNotFound extends PushPullNotificationError
+
+}
