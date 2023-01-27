@@ -22,14 +22,17 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
 import com.google.inject.ImplementedBy
+import play.api.Logging
 import play.api.http.Status._
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
 
 import javax.inject._
 import scala.concurrent._
@@ -53,14 +56,15 @@ trait PushPullNotificationService {
 @Singleton
 class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: PushPullNotificationConnector, appConfig: AppConfig)
     extends PushPullNotificationService
-    with ConvertError {
+    with ConvertError
+    with Logging {
 
   override def getBoxId(
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     boxAssociationRequest match {
-      case BoxAssociationRequest(_, _, Some(boxId)) => checkBoxIdExists(boxId)
-      case BoxAssociationRequest(clientId, _, None) => getDefaultBoxId(clientId)
+      case BoxAssociationRequest(clientId, _, Some(boxId)) => checkBoxIdExists(clientId, boxId)
+      case BoxAssociationRequest(clientId, _, None)        => getDefaultBoxId(clientId)
     }
 
   override def sendPushNotification(
@@ -95,8 +99,12 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           case Right(_) => Right(())
           case Left(error) =>
             error.statusCode match {
-              case NOT_FOUND => Left(BoxNotFound(boxAssociation.boxId.value))
-              case _         => Left(UnexpectedError(Some(error)))
+              case NOT_FOUND =>
+                logger.warn(
+                  s"Attempted to send notification for movement '${boxAssociation._id.value}' to box ID '${boxAssociation.boxId.value}', but the box no longer exists."
+                )
+                Left(BoxNotFound(boxAssociation.boxId))
+              case _ => Left(UnexpectedError(Some(error)))
             }
         }
     )
@@ -110,12 +118,14 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
           boxResponse => Right(boxResponse.boxId)
         }
         .recover {
-          case NonFatal(e) =>
-            Left(UnexpectedError(thr = Some(e)))
+          case UpstreamErrorResponse(_, NOT_FOUND, _, _) =>
+            logger.warn(s"Client ID '$clientId' did not return a default box.")
+            Left(PushPullNotificationError.DefaultBoxNotFound)
+          case NonFatal(e) => Left(UnexpectedError(thr = Some(e)))
         }
     )
 
-  private def checkBoxIdExists(boxId: BoxId)(implicit
+  private def checkBoxIdExists(clientId: String, boxId: BoxId)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): EitherT[Future, PushPullNotificationError, BoxId] =
@@ -123,8 +133,12 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
       pushPullNotificationConnector.getAllBoxes
         .map {
           boxList =>
+            // TODO: We should restrict this to boxes associated to the appropriate client ID
             if (boxList.exists(_.boxId == boxId)) Right(boxId)
-            else Left(InvalidBoxId)
+            else {
+              logger.warn(s"Client ID '$clientId' requested box ID '$boxId', but it did not exist.")
+              Left(BoxNotFound(boxId))
+            }
         }
         .recover {
           case NonFatal(e) =>
