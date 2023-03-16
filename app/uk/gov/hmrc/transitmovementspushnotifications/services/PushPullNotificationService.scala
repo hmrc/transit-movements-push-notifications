@@ -45,7 +45,7 @@ trait PushPullNotificationService {
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
-  def sendPushNotification(boxAssociation: BoxAssociation, contentLength: Option[String], messageId: MessageId, body: Source[ByteString, _])(implicit
+  def sendPushNotification(boxAssociation: BoxAssociation, contentLength: Option[String], messageId: MessageId, body: Option[Source[ByteString, _]])(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     mat: Materializer
@@ -71,7 +71,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     boxAssociation: BoxAssociation,
     contentLength: Option[String],
     messageId: MessageId,
-    body: Source[ByteString, _]
+    body: Option[Source[ByteString, _]]
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -86,15 +86,22 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         .filter(_ <= appConfig.maxPushPullPayloadSize)
         .map {
           _ =>
-            body
+            val payload: Option[Source[ByteString, _]] = Some(body.asInstanceOf[Source[ByteString, _]])
+            payload
               .reduce(_ ++ _)
               .map(_.utf8String)
               .runWith(Sink.headOption)
         }
         .getOrElse(Future.successful(None))
-        .flatMap(
-          body => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, body))
-        )
+        .flatMap {
+          bodyOpt =>
+            bodyOpt match {
+              case Some(bodyContent) =>
+                pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, Some(bodyContent)))
+              case None =>
+                pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, None))
+            }
+        }
         .map {
           case Right(_) => Right(())
           case Left(error) =>

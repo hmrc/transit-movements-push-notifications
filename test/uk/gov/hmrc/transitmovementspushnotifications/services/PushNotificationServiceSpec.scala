@@ -178,7 +178,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               boxAssociation = boxAssociation,
               contentLength = Some((maxPayloadSize - 1).toString),
               messageId = messageId,
-              body = payload
+              body = Some(payload)
             )
 
             whenReady(result.value) {
@@ -211,7 +211,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               boxAssociation = boxAssociation,
               contentLength = Some((maxPayloadSize + 1).toString),
               messageId = messageId,
-              body = payload
+              body = Some(payload)
             )
 
             whenReady(result.value) {
@@ -235,7 +235,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               boxAssociation = boxAssociation,
               contentLength = Some((maxPayloadSize - 1).toString),
               messageId = messageId,
-              body = payload
+              body = Some(payload)
             )
 
             whenReady(result.value) {
@@ -260,7 +260,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               boxAssociation = boxAssociation,
               contentLength = Some((maxPayloadSize - 1).toString),
               messageId = messageId,
-              body = payload
+              body = Some(payload)
             )
 
             whenReady(result.value) {

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.models
 
-object Constants {
+import play.api.libs.json.Json
 
-  val BoxName        = "customs/transits##2.0##notificationUrl"
-  val ObjectStoreURI = "X-Object-Store-Uri"
-  val MessageType    = "X-Message-Type"
-
+object ObjectStoreResourceLocation {
+  implicit val objectStoreResourceLocationFormat = Json.valueFormat[ObjectStoreResourceLocation]
 }
+
+case class ObjectStoreResourceLocation(value: String) extends AnyVal

@@ -41,6 +41,9 @@ object PresentationError extends CommonFormats with Logging {
   def notFoundError(message: String): PresentationError =
     StandardError(message, ErrorCode.NotFound)
 
+  def unsupportedMediaTypeError(message: String): PresentationError =
+    StandardError(message, ErrorCode.UnsupportedMediaType)
+
   def upstreamServiceError(
     message: String = "Internal server error",
     code: ErrorCode = ErrorCode.InternalServerError,
