@@ -16,10 +16,17 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.models
 
+import play.api.http.Writeable
+import play.api.libs.json.Format
 import play.api.libs.json.Json
 
-object ObjectStoreResourceLocation {
-  implicit val objectStoreResourceLocationFormat = Json.valueFormat[ObjectStoreResourceLocation]
+object EORINumber {
+  implicit lazy val eoriNumberFormats: Format[EORINumber] = Json.valueFormat[EORINumber]
+
+  implicit lazy val eoriNumberWriteable: Writeable[EORINumber] = Writeable(
+    eoriNumber => implicitly[Writeable[String]].transform(eoriNumber.value),
+    None
+  )
 }
 
-case class ObjectStoreResourceLocation(value: String) extends AnyVal
+case class EORINumber(value: String) extends AnyVal

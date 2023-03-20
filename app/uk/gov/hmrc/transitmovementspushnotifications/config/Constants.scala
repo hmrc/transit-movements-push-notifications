@@ -18,8 +18,5 @@ package uk.gov.hmrc.transitmovementspushnotifications.config
 
 object Constants {
 
-  val BoxName        = "customs/transits##2.0##notificationUrl"
-  val ObjectStoreURI = "X-Object-Store-Uri"
-  val MessageType    = "X-Message-Type"
-
+  val BoxName = "customs/transits##2.0##notificationUrl"
 }

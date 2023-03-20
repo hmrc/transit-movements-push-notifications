@@ -45,6 +45,7 @@ import uk.gov.hmrc.http.HttpVerbs.PATCH
 import uk.gov.hmrc.http.HttpVerbs.POST
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
@@ -60,7 +61,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
-class PushNotificationControllerSpec extends SpecBase with ModelGenerators with TestActorSystem with ScalaCheckDrivenPropertyChecks {
+class PushNotificationControllerSpec extends SpecBase with ModelGenerators with TestActorSystem with ScalaCheckDrivenPropertyChecks with ConvertError {
 
   implicit val timeout: Timeout = 5.seconds
 
@@ -342,7 +343,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   }
 
-  "postNotification" - {
+  "postSmallNotification" - {
 
     val validBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
 
@@ -351,7 +352,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       uri = routes.PushNotificationController
         .postNotification(boxAssociation._id, messageId)
         .url,
-      headers = FakeHeaders(),
+      headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)),
       body = validBody
     )
 
@@ -364,9 +365,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
           when(
             mockPushPullNotificationService.sendPushNotification(
-              any[BoxAssociation],
+              eqTo(boxAssociation),
               any[Option[String]],
-              eqTo(messageId),
+              MessageId(eqTo(messageId.value)),
               any[Option[Source[ByteString, _]]]
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
@@ -380,18 +381,23 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "when called with a movement id for which there is no box id " - {
 
-      "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
+      "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
         (boxAssociation, messageId) =>
           when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
             .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
 
           when(
-            mockPushPullNotificationService.sendPushNotification(
-              any[BoxAssociation],
-              any[Option[String]],
-              eqTo(messageId),
-              any[Option[Source[ByteString, _]]]
-            )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Option[String]],
+                MessageId(eqTo(messageId.value)),
+                any[Option[Source[ByteString, _]]]()
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
           ).thenReturn(EitherT.rightT(()))
 
           val result =
@@ -399,10 +405,10 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
           status(result) mustBe NOT_FOUND
       }
-
     }
 
     "when receiving an unexpected error" - {
+
       "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
         (boxAssociation, messageId) =>
           when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
@@ -414,7 +420,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Option[String]],
                 MessageId(eqTo(messageId.value)),
-                None
+                any[Option[Source[ByteString, _]]]()
               )(
                 any[ExecutionContext],
                 any[HeaderCarrier],
@@ -422,14 +428,111 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               )
           ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
 
-          val result =
-            controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
+          val result = controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
 
           status(result) mustBe INTERNAL_SERVER_ERROR
       }
+    }
+  }
 
+  "postLargeNotification " - {
+
+    "should return Accepted if the push notification is sent successfully" in forAll(
+      arbitrary[BoxAssociation],
+      arbitrary[MessageId].suchThat(_.value.nonEmpty)
+    ) {
+      (boxAssociation, messageId) =>
+        when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          .thenReturn(EitherT.rightT(boxAssociation))
+
+        when(
+          mockPushPullNotificationService.sendPushNotification(
+            eqTo(boxAssociation),
+            any[Option[String]],
+            MessageId(eqTo(messageId.value)),
+            any[Option[Source[ByteString, _]]]
+          )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
+        ).thenReturn(EitherT.rightT(()))
+
+        lazy val request = FakeRequest(
+          method = "POST",
+          uri = routes.PushNotificationController
+            .postNotification(boxAssociation._id, messageId)
+            .url,
+          headers = FakeHeaders(),
+          body = AnyContentAsEmpty
+        )
+
+        val result = controller.postNotification(boxAssociation._id, messageId)(request)
+
+        status(result) mustBe ACCEPTED
     }
 
+    "when called with a movement id for which there is no box id " - {
+
+      "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
+        (boxAssociation, messageId) =>
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+            .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
+
+          when(
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Option[String]],
+                MessageId(eqTo(messageId.value)),
+                any[Option[Source[ByteString, _]]]()
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
+          ).thenReturn(EitherT.rightT(()))
+
+          lazy val request = FakeRequest(
+            method = "POST",
+            uri = routes.PushNotificationController
+              .postNotification(boxAssociation._id, messageId)
+              .url,
+            headers = FakeHeaders(),
+            body = AnyContentAsEmpty
+          )
+
+          val result =
+            controller.postNotification(boxAssociation._id, messageId)(request)
+
+          status(result) mustBe NOT_FOUND
+      }
+    }
+
+    "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
+      (boxAssociation, messageId) =>
+        when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          .thenReturn(EitherT.rightT(boxAssociation))
+
+        when(
+          mockPushPullNotificationService.sendPushNotification(
+            eqTo(boxAssociation),
+            any[Option[String]],
+            MessageId(eqTo(messageId.value)),
+            any[Option[Source[ByteString, _]]]
+          )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
+        ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
+
+        lazy val request = FakeRequest(
+          method = "POST",
+          uri = routes.PushNotificationController
+            .postNotification(boxAssociation._id, messageId)
+            .url,
+          headers = FakeHeaders(),
+          body = AnyContentAsEmpty
+        )
+
+        val result =
+          controller.postNotification(boxAssociation._id, messageId)(request)
+
+        status(result) mustBe INTERNAL_SERVER_ERROR
+    }
   }
 
 }

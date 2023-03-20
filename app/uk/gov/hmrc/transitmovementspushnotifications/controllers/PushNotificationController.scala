@@ -20,12 +20,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
-import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.libs.streams.Accumulator
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
@@ -55,65 +53,43 @@ class PushNotificationController @Inject() (
   ec: ExecutionContext
 ) extends BackendController(cc)
     with ConvertError
-    with ObjectStoreURIHeaderExtractor
     with ContentTypeRouting
-    with BaseController
-    with StreamingParsers
-    with Logging {
+    with StreamingParsers {
 
-  def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] = {
-    println(s"postNotification called with movementId=$movementId, messageId=$messageId")
-    logger.debug(s"postNotification called with movementId=$movementId, messageId=$messageId")
+  def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
     contentTypeRoute {
-      case Some(_) => postSmallNotification(movementId, Some(messageId))
-      case None    => postLargeNotification(movementId, Some(messageId))
+      case Some(_) =>
+        postSmallNotification(movementId, messageId)
+      case None =>
+        postLargeNotification(movementId, messageId)
     }
-  }
 
-  def postSmallNotification(movementId: MovementId, messageId: Option[MessageId]): Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
+  private def postSmallNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
     implicit request =>
       val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
-      messageId match {
-        case Some(msgId) =>
-          (for {
-            boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
-            result         <- pushPullNotificationService.sendPushNotification(boxAssociation, contentLength, msgId, Some(request.body)).asPresentation
-          } yield result).fold[Result](
-            baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
-            _ => Accepted
-          )
-        case None =>
-          Future.successful(BadRequest("Missing messageId"))
-      }
+
+      (for {
+        boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
+        result         <- pushPullNotificationService.sendPushNotification(boxAssociation, contentLength, messageId, Some(request.body)).asPresentation
+      } yield result).fold[Result](
+        baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
+        _ => Accepted
+      )
+
   }
 
-  def postLargeNotification(movementId: MovementId, messageId: Option[MessageId]): Action[Source[ByteString, _]] =
-    Action.async(streamFromMemory) {
+  private def postLargeNotification(movementId: MovementId, messageId: MessageId) =
+    Action.async(parse.anyContent) {
       implicit request =>
-        messageId match {
-          case Some(msgId) =>
-            val futureResult = for {
-              boxAssociationE <- boxAssociationRepository.getBoxAssociation(movementId).value
-              resultE <- boxAssociationE match {
-                case Right(boxAssociation) =>
-                  pushPullNotificationService
-                    .sendPushNotification(boxAssociation, None, msgId, None)
-                    .value
-                case Left(_) => Future.successful(Left(PresentationError.internalServerError("Failed to retrieve BoxAssociation")))
-              }
-            } yield resultE
-
-            futureResult.map {
-              case Right(_) => Accepted
-              case Left(baseError) =>
-                val presentationError = baseError.asInstanceOf[PresentationError]
-                val statusCode        = presentationError.code.statusCode
-                val json              = Json.toJson(presentationError)(PresentationError.baseErrorWrites)
-                Status(statusCode)(json)
-            }
-          case None =>
-            Future.successful(BadRequest("Missing messageId"))
-        }
+        (for {
+          boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
+          result <- pushPullNotificationService
+            .sendPushNotification(boxAssociation, None, messageId, None)
+            .asPresentation
+        } yield result).fold[Result](
+          baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
+          _ => Accepted
+        )
     }
 
   def updateAssociationTTL(movementId: MovementId): Action[AnyContent] = Action.async {
@@ -145,10 +121,5 @@ class PushNotificationController @Inject() (
       case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
       case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId and movementType to be present in the body"))
     }
-
-  override lazy val streamFromMemory: BodyParser[Source[ByteString, _]] = BodyParser {
-    _ =>
-      Accumulator.source[ByteString].map(Right.apply)
-  }
 
 }

@@ -148,128 +148,208 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
           _ mustBe Left(BoxNotFound(boxId))
         }
     }
+  }
 
-    "sendPushNotification" - {
+  "sendPushNotification" - {
 
-      val sampleString = "<ncts:CC007C PhaseID=\"NCTS5.0\" xmlns:ncts=\"http://ncts.dgtaxud.ec\">some payload</ncts:CC007C>)"
-      val payload      = Source.single(ByteString(sampleString, StandardCharsets.UTF_8))
+    val sampleString = "<ncts:CC007C PhaseID=\"NCTS5.0\" xmlns:ncts=\"http://ncts.dgtaxud.ec\">some payload</ncts:CC007C>)"
+    val payload      = Source.single(ByteString(sampleString, StandardCharsets.UTF_8))
 
-      "when given a valid boxId and a valid payload with size less than maximum allowed" - {
-        "should return a valid response" in forAll(
-          arbitrary[BoxAssociation],
-          arbitrary[MessageId]
-        ) {
-          (boxAssociation, messageId) =>
-            when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+    "when given a valid boxId and a valid payload with size less than maximum allowed" - {
+      "should return a valid response" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-            val expectedMessageNotification =
-              MessageNotification(
-                s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
-                Some(sampleString)
-              )
-
-            when(
-              mockPushPullNotificationConnector
-                .postNotification(BoxId(eqTo(boxAssociation.boxId.value)), eqTo(expectedMessageNotification))(any[ExecutionContext], any[HeaderCarrier])
-            )
-              .thenReturn(Future.successful(Right(())))
-
-            val result = sut.sendPushNotification(
-              boxAssociation = boxAssociation,
-              contentLength = Some((maxPayloadSize - 1).toString),
-              messageId = messageId,
-              body = Some(payload)
+          val expectedMessageNotification =
+            MessageNotification(
+              s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              Some(sampleString)
             )
 
-            whenReady(result.value) {
-              _ mustBe Right(())
-            }
-        }
+          when(
+            mockPushPullNotificationConnector
+              .postNotification(BoxId(eqTo(boxAssociation.boxId.value)), eqTo(expectedMessageNotification))(any[ExecutionContext], any[HeaderCarrier])
+          )
+            .thenReturn(Future.successful(Right(())))
+
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            messageId = messageId,
+            body = Some(payload)
+          )
+
+          whenReady(result.value) {
+            _ mustBe Right(())
+          }
       }
+    }
 
-      "when given a valid boxId and a valid payload with size greater than maximum allowed" - {
-        "should return a valid response" in forAll(
-          arbitrary[BoxAssociation],
-          arbitrary[MessageId]
-        ) {
-          (boxAssociation, messageId) =>
-            when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+    "when given a valid boxId and a valid payload with size greater than maximum allowed" - {
+      "should return a valid response" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-            val expectedMessageNotification =
-              MessageNotification(
-                s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
-                None
-              )
-
-            when(
-              mockPushPullNotificationConnector
-                .postNotification(BoxId(eqTo(boxAssociation.boxId.value)), eqTo(expectedMessageNotification))(any[ExecutionContext], any[HeaderCarrier])
-            )
-              .thenReturn(Future.successful(Right(())))
-
-            val result = sut.sendPushNotification(
-              boxAssociation = boxAssociation,
-              contentLength = Some((maxPayloadSize + 1).toString),
-              messageId = messageId,
-              body = Some(payload)
+          val expectedMessageNotification =
+            MessageNotification(
+              s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              None
             )
 
-            whenReady(result.value) {
-              _ mustBe Right((): Unit)
-            }
-        }
+          when(
+            mockPushPullNotificationConnector
+              .postNotification(BoxId(eqTo(boxAssociation.boxId.value)), eqTo(expectedMessageNotification))(any[ExecutionContext], any[HeaderCarrier])
+          )
+            .thenReturn(Future.successful(Right(())))
+
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = Some((maxPayloadSize + 1).toString),
+            messageId = messageId,
+            body = Some(payload)
+          )
+
+          whenReady(result.value) {
+            _ mustBe Right((): Unit)
+          }
       }
+    }
 
-      "when given a boxId that is not in the database" - {
-        "should return a not found response" in forAll(
-          arbitrary[BoxAssociation],
-          arbitrary[MessageId]
-        ) {
-          (boxAssociation, messageId) =>
-            when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+    "when given a boxId that is not in the database" - {
+      "should return a not found response" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-            when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
-              .thenReturn(Future.successful(Left(UpstreamErrorResponse(boxAssociation.boxId.toString, NOT_FOUND))))
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse(boxAssociation.boxId.toString, NOT_FOUND))))
 
-            val result = sut.sendPushNotification(
-              boxAssociation = boxAssociation,
-              contentLength = Some((maxPayloadSize - 1).toString),
-              messageId = messageId,
-              body = Some(payload)
-            )
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            messageId = messageId,
+            body = Some(payload)
+          )
 
-            whenReady(result.value) {
-              _ mustBe Left(BoxNotFound(boxAssociation.boxId))
-            }
-        }
+          whenReady(result.value) {
+            _ mustBe Left(BoxNotFound(boxAssociation.boxId))
+          }
       }
+    }
 
-      "when sending a badly formed request" - {
-        "should return a response indicating an unexpected error occurred" in forAll(
-          arbitrary[BoxAssociation],
-          arbitrary[MessageId]
-        ) {
-          (boxAssociation, messageId) =>
-            when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
+    "when sending a badly formed request" - {
+      "should return a response indicating an unexpected error occurred" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-            val errorResponse = UpstreamErrorResponse(boxAssociation.boxId.toString, BAD_REQUEST)
-            when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
-              .thenReturn(Future.successful(Left(errorResponse)))
+          val errorResponse = UpstreamErrorResponse(boxAssociation.boxId.toString, BAD_REQUEST)
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(errorResponse)))
 
-            val result = sut.sendPushNotification(
-              boxAssociation = boxAssociation,
-              contentLength = Some((maxPayloadSize - 1).toString),
-              messageId = messageId,
-              body = Some(payload)
-            )
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = Some((maxPayloadSize - 1).toString),
+            messageId = messageId,
+            body = Some(payload)
+          )
 
-            whenReady(result.value) {
-              _ mustBe Left(UnexpectedError(Some(errorResponse)))
-            }
-        }
+          whenReady(result.value) {
+            _ mustBe Left(UnexpectedError(Some(errorResponse)))
+          }
       }
-
     }
 
   }
+
+  "sendPushNotification Large Messages" - {
+
+    "when given a valid boxId" - {
+      "should return a valid response" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          val expectedMessageNotification =
+            MessageNotification(
+              s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              None
+            )
+
+          when(
+            mockPushPullNotificationConnector
+              .postNotification(BoxId(eqTo(boxAssociation.boxId.value)), eqTo(expectedMessageNotification))(any[ExecutionContext], any[HeaderCarrier])
+          )
+            .thenReturn(Future.successful(Right(())))
+
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = None,
+            messageId = messageId,
+            body = None
+          )
+
+          whenReady(result.value) {
+            _ mustBe Right(())
+          }
+      }
+    }
+
+    "when given a boxId that is not in the database" - {
+      "should return a not found response" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(UpstreamErrorResponse(boxAssociation.boxId.toString, NOT_FOUND))))
+
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = None,
+            messageId = messageId,
+            body = None
+          )
+
+          whenReady(result.value) {
+            _ mustBe Left(BoxNotFound(boxAssociation.boxId))
+          }
+      }
+    }
+
+    "when sending a badly formed request" - {
+      "should return a response indicating an unexpected error occurred" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId]
+      ) {
+        (boxAssociation, messageId) =>
+          val errorResponse = UpstreamErrorResponse(boxAssociation.boxId.toString, BAD_REQUEST)
+          when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
+            .thenReturn(Future.successful(Left(errorResponse)))
+
+          val result = sut.sendPushNotification(
+            boxAssociation = boxAssociation,
+            contentLength = None,
+            messageId = messageId,
+            body = None
+          )
+
+          whenReady(result.value) {
+            _ mustBe Left(UnexpectedError(Some(errorResponse)))
+          }
+      }
+    }
+
+  }
+
 }
