@@ -45,7 +45,7 @@ trait PushPullNotificationService {
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
-  def sendPushNotification(boxAssociation: BoxAssociation, contentLength: Option[String], messageId: MessageId, body: Source[ByteString, _])(implicit
+  def sendPushNotification(boxAssociation: BoxAssociation, contentLength: Option[String], messageId: MessageId, body: Option[Source[ByteString, _]])(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     mat: Materializer
@@ -71,7 +71,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     boxAssociation: BoxAssociation,
     contentLength: Option[String],
     messageId: MessageId,
-    body: Source[ByteString, _]
+    body: Option[Source[ByteString, _]]
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -81,32 +81,37 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
 
     EitherT(
-      contentLength
-        .flatMap(_.toIntOption)
-        .filter(_ <= appConfig.maxPushPullPayloadSize)
-        .map {
-          _ =>
-            body
-              .reduce(_ ++ _)
-              .map(_.utf8String)
-              .runWith(Sink.headOption)
-        }
-        .getOrElse(Future.successful(None))
-        .flatMap(
-          body => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, body))
-        )
-        .map {
-          case Right(_) => Right(())
-          case Left(error) =>
-            error.statusCode match {
-              case NOT_FOUND =>
-                logger.warn(
-                  s"Attempted to send notification for movement '${boxAssociation._id.value}' to box ID '${boxAssociation.boxId.value}', but the box no longer exists."
-                )
-                Left(BoxNotFound(boxAssociation.boxId))
-              case _ => Left(UnexpectedError(Some(error)))
+      (body match {
+        case None => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, None))
+        case Some(body) =>
+          contentLength
+            .flatMap(_.toIntOption)
+            .filter(_ <= appConfig.maxPushPullPayloadSize)
+            .map {
+              _ =>
+                body
+                  .reduce(_ ++ _)
+                  .map(_.utf8String)
+                  .runWith(Sink.headOption)
             }
-        }
+            .getOrElse(Future.successful(None))
+            .flatMap {
+              bodyOpt =>
+                pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, bodyOpt))
+            }
+      }).map {
+        case Right(_) => Right(())
+        case Left(error) =>
+          error.statusCode match {
+            case NOT_FOUND =>
+              logger.warn(
+                s"Attempted to send notification for movement '${boxAssociation._id.value}' to box ID '${boxAssociation.boxId.value}', but the box no longer exists."
+              )
+              Left(BoxNotFound(boxAssociation.boxId))
+            case _ => Left(UnexpectedError(Some(error)))
+
+          }
+      }
     )
   }
 
