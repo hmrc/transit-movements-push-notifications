@@ -17,6 +17,7 @@
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
 import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Indexes
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
@@ -34,12 +35,14 @@ import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.formats.MongoFormats
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
 
 import java.time.Clock
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BoxAssociationRepositorySpec
@@ -70,6 +73,16 @@ class BoxAssociationRepositorySpec
 
   "BoxAssociationRepository" should "have the correct name" in {
     repository.collectionName shouldBe "box_association"
+  }
+
+  "BoxAssociationRepository" should "have the correct column associated with the expected TTL" in {
+    repository.indexes.head.getKeys shouldEqual Indexes.ascending("updated")
+
+    repository.indexes.head.getOptions.getExpireAfter(TimeUnit.SECONDS) shouldEqual appConfig.documentTtl
+  }
+
+  "BoxAssociationRepository" should "have the correct domain format" in {
+    repository.domainFormat shouldEqual MongoFormats.boxAssociationFormat
   }
 
   val boxAssociation = arbitraryBoxAssociation.arbitrary.sample.get
