@@ -38,9 +38,9 @@ object NotificationType {
   }
 
   implicit val statusReads: Reads[NotificationType] = Reads {
-    case JsString("Received") => JsSuccess(SUBMISSION_NOTIFICATION)
-    case JsString("Pending")  => JsSuccess(MESSAGE_RECEIVED)
-    case _                    => JsError("Invalid notification type")
+    case JsString("SUBMISSION_NOTIFICATION") => JsSuccess(SUBMISSION_NOTIFICATION)
+    case JsString("MESSAGE_RECEIVED")        => JsSuccess(MESSAGE_RECEIVED)
+    case _                                   => JsError("Invalid notification type")
   }
 
 }
