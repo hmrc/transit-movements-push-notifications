@@ -45,7 +45,13 @@ trait PushPullNotificationService {
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
-  def sendPushNotification(boxAssociation: BoxAssociation, contentLength: Option[String], messageId: MessageId, body: Option[Source[ByteString, _]])(implicit
+  def sendPushNotification(
+    boxAssociation: BoxAssociation,
+    contentLength: Option[String],
+    messageId: MessageId,
+    body: Option[Source[ByteString, _]],
+    notificationType: NotificationType
+  )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
     mat: Materializer
@@ -71,7 +77,8 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     boxAssociation: BoxAssociation,
     contentLength: Option[String],
     messageId: MessageId,
-    body: Option[Source[ByteString, _]]
+    body: Option[Source[ByteString, _]],
+    notificationType: NotificationType
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -82,7 +89,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
 
     EitherT(
       (body match {
-        case None => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, None))
+        case None => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, None, None))
         case Some(body) =>
           contentLength
             .flatMap(_.toIntOption)
@@ -97,7 +104,10 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
             .getOrElse(Future.successful(None))
             .flatMap {
               bodyOpt =>
-                pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, bodyOpt))
+                if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
+                  pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, None, bodyOpt))
+                else
+                  pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, bodyOpt, None))
             }
       }).map {
         case Right(_) => Right(())

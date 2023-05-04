@@ -20,7 +20,9 @@ import play.api.libs.json.Json
 
 case class MessageNotification(
   messageUri: String,
-  messageBody: Option[String]
+  notificationType: NotificationType,
+  messageBody: Option[String],
+  response: Option[String]
 )
 
 object MessageNotification {
