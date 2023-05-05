@@ -32,15 +32,15 @@ object NotificationType {
 
   val values = Seq(SUBMISSION_NOTIFICATION, MESSAGE_RECEIVED)
 
-  implicit val messageStatusWrites = new Writes[NotificationType] {
+  implicit val notificationTypeWrites = new Writes[NotificationType] {
 
     def writes(notificationType: NotificationType) = Json.toJson(notificationType.toString())
   }
 
-  implicit val statusReads: Reads[NotificationType] = Reads {
+  implicit val notificationTypeReads: Reads[NotificationType] = Reads {
     case JsString("SUBMISSION_NOTIFICATION") => JsSuccess(SUBMISSION_NOTIFICATION)
     case JsString("MESSAGE_RECEIVED")        => JsSuccess(MESSAGE_RECEIVED)
-    case _                                   => JsError("Invalid notification type")
+    case _                                   => JsError()
   }
 
 }

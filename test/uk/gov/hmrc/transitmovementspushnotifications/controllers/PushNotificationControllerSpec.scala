@@ -374,7 +374,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
         (boxAssociation, messageId) =>
-          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
 
           when(
@@ -400,7 +400,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
         (boxAssociation, messageId) =>
-          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
 
           when(
@@ -426,7 +426,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
         (boxAssociation, messageId) =>
-          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
 
           when(
@@ -457,7 +457,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
         (boxAssociation, messageId) =>
-          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
 
           when(
@@ -492,7 +492,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       arbitrary[MessageId].suchThat(_.value.nonEmpty)
     ) {
       (boxAssociation, messageId) =>
-        when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+        when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
           .thenReturn(EitherT.rightT(boxAssociation))
 
         when(
@@ -523,7 +523,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
         (boxAssociation, messageId) =>
-          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
 
           when(
@@ -559,7 +559,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
       (boxAssociation, messageId) =>
-        when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+        when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
           .thenReturn(EitherT.rightT(boxAssociation))
 
         when(
