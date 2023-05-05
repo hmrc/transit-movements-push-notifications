@@ -25,6 +25,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -94,11 +95,15 @@ trait ModelGenerators extends BaseGenerators {
       } yield BoxAssociation(movementId, boxId, movementType, updated)
     }
 
+  implicit lazy val arbitraryNotificationType: Arbitrary[NotificationType] =
+    Arbitrary(Gen.oneOf(NotificationType.values))
+
   implicit lazy val arbitraryMessageNotification: Arbitrary[MessageNotification] =
     Arbitrary {
       for {
-        uri         <- arbitrary[String]
-        messageBody <- arbitrary[Option[String]]
-      } yield MessageNotification(uri, messageBody)
+        uri              <- arbitrary[String]
+        messageBody      <- arbitrary[Option[String]]
+        notificationType <- arbitrary[NotificationType]
+      } yield MessageNotification(uri, notificationType, messageBody, messageBody)
     }
 }

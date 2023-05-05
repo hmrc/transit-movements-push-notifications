@@ -345,18 +345,32 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   "postSmallNotification" - {
 
-    val validBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
+    val validXMLBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
 
-    def fakeRequest(boxAssociation: BoxAssociation, messageId: MessageId) = FakeRequest(
-      method = POST,
-      uri = routes.PushNotificationController
-        .postNotification(boxAssociation._id, messageId)
-        .url,
-      headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)),
-      body = validBody
+    val validJSONBody = Json.toJson(
+      Json.obj(
+        "code" -> "SUCCESS",
+        "message" ->
+          s"The message for movement was successfully processed"
+      )
     )
 
-    "when called with a movement id, message id for which a box id is in the database" - {
+    def fakePostNotification[A](
+      headers: FakeHeaders,
+      body: A,
+      boxAssociation: BoxAssociation,
+      messageId: MessageId
+    ): Request[A] =
+      FakeRequest(
+        method = POST,
+        uri = routes.PushNotificationController
+          .postNotification(boxAssociation._id, messageId)
+          .url,
+        headers = headers,
+        body = body
+      )
+
+    "when called with a movement id, message id for which a box id is in the database with xml content type" - {
 
       "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
         (boxAssociation, messageId) =>
@@ -368,12 +382,41 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               eqTo(boxAssociation),
               any[Option[String]],
               MessageId(eqTo(messageId.value)),
-              any[Option[Source[ByteString, _]]]
+              any[Option[Source[ByteString, _]]],
+              eqTo(NotificationType.MESSAGE_RECEIVED)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
 
           val result =
-            controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
+            controller.postNotification(boxAssociation._id, messageId)(
+              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)), validXMLBody, boxAssociation, messageId)
+            )
+
+          status(result) mustBe ACCEPTED
+      }
+    }
+
+    "when called with a movement id, message id for which a box id is in the database with json content type" - {
+
+      "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
+        (boxAssociation, messageId) =>
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(any[String].asInstanceOf[MovementId]))
+            .thenReturn(EitherT.rightT(boxAssociation))
+
+          when(
+            mockPushPullNotificationService.sendPushNotification(
+              eqTo(boxAssociation),
+              any[Option[String]],
+              MessageId(eqTo(messageId.value)),
+              any[Option[Source[ByteString, _]]],
+              eqTo(NotificationType.SUBMISSION_NOTIFICATION)
+            )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
+          ).thenReturn(EitherT.rightT(()))
+
+          val result =
+            controller.postNotification(boxAssociation._id, messageId)(
+              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)), validJSONBody, boxAssociation, messageId)
+            )
 
           status(result) mustBe ACCEPTED
       }
@@ -392,7 +435,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Option[String]],
                 MessageId(eqTo(messageId.value)),
-                any[Option[Source[ByteString, _]]]()
+                any[Option[Source[ByteString, _]]],
+                eqTo(NotificationType.MESSAGE_RECEIVED)
               )(
                 any[ExecutionContext],
                 any[HeaderCarrier],
@@ -401,7 +445,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           ).thenReturn(EitherT.rightT(()))
 
           val result =
-            controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
+            controller.postNotification(boxAssociation._id, messageId)(
+              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)), validXMLBody, boxAssociation, messageId)
+            )
 
           status(result) mustBe NOT_FOUND
       }
@@ -420,7 +466,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Option[String]],
                 MessageId(eqTo(messageId.value)),
-                any[Option[Source[ByteString, _]]]()
+                any[Option[Source[ByteString, _]]],
+                eqTo(NotificationType.MESSAGE_RECEIVED)
               )(
                 any[ExecutionContext],
                 any[HeaderCarrier],
@@ -428,7 +475,10 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               )
           ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
 
-          val result = controller.postNotification(boxAssociation._id, messageId)(fakeRequest(boxAssociation, messageId))
+          val result =
+            controller.postNotification(boxAssociation._id, messageId)(
+              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)), validXMLBody, boxAssociation, messageId)
+            )
 
           status(result) mustBe INTERNAL_SERVER_ERROR
       }
@@ -450,7 +500,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
             eqTo(boxAssociation),
             any[Option[String]],
             MessageId(eqTo(messageId.value)),
-            any[Option[Source[ByteString, _]]]
+            any[Option[Source[ByteString, _]]],
+            eqTo(NotificationType.SUBMISSION_NOTIFICATION)
           )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
         ).thenReturn(EitherT.rightT(()))
 
@@ -481,7 +532,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Option[String]],
                 MessageId(eqTo(messageId.value)),
-                any[Option[Source[ByteString, _]]]()
+                any[Option[Source[ByteString, _]]],
+                eqTo(NotificationType.SUBMISSION_NOTIFICATION)
               )(
                 any[ExecutionContext],
                 any[HeaderCarrier],
@@ -515,7 +567,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
             eqTo(boxAssociation),
             any[Option[String]],
             MessageId(eqTo(messageId.value)),
-            any[Option[Source[ByteString, _]]]
+            any[Option[Source[ByteString, _]]],
+            eqTo(NotificationType.SUBMISSION_NOTIFICATION)
           )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
         ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
 

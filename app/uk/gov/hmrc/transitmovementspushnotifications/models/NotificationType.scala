@@ -30,7 +30,7 @@ object NotificationType {
 
   final case object MESSAGE_RECEIVED extends NotificationType
 
-  val statusValues = Seq(SUBMISSION_NOTIFICATION, MESSAGE_RECEIVED)
+  val values = Seq(SUBMISSION_NOTIFICATION, MESSAGE_RECEIVED)
 
   implicit val messageStatusWrites = new Writes[NotificationType] {
 

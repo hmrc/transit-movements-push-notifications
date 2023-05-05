@@ -40,6 +40,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
+import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
@@ -158,16 +159,28 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when given a valid boxId and a valid payload with size less than maximum allowed" - {
       "should return a valid response" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           val expectedMessageNotification =
-            MessageNotification(
-              s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
-              Some(sampleString)
-            )
+            if (notificationType == NotificationType.MESSAGE_RECEIVED) {
+              MessageNotification(
+                s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                notificationType,
+                Some(sampleString),
+                None
+              )
+            } else {
+              MessageNotification(
+                s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                notificationType,
+                None,
+                Some(sampleString)
+              )
+            }
 
           when(
             mockPushPullNotificationConnector
@@ -179,7 +192,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = Some((maxPayloadSize - 1).toString),
             messageId = messageId,
-            body = Some(payload)
+            body = Some(payload),
+            notificationType
           )
 
           whenReady(result.value) {
@@ -191,14 +205,17 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when given a valid boxId and a valid payload with size greater than maximum allowed" - {
       "should return a valid response" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           val expectedMessageNotification =
             MessageNotification(
               s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              notificationType,
+              None,
               None
             )
 
@@ -212,7 +229,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = Some((maxPayloadSize + 1).toString),
             messageId = messageId,
-            body = Some(payload)
+            body = Some(payload),
+            notificationType
           )
 
           whenReady(result.value) {
@@ -224,9 +242,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when given a boxId that is not in the database" - {
       "should return a not found response" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
@@ -236,7 +255,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = Some((maxPayloadSize - 1).toString),
             messageId = messageId,
-            body = Some(payload)
+            body = Some(payload),
+            notificationType
           )
 
           whenReady(result.value) {
@@ -248,9 +268,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when sending a badly formed request" - {
       "should return a response indicating an unexpected error occurred" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           val errorResponse = UpstreamErrorResponse(boxAssociation.boxId.toString, BAD_REQUEST)
@@ -261,7 +282,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = Some((maxPayloadSize - 1).toString),
             messageId = messageId,
-            body = Some(payload)
+            body = Some(payload),
+            notificationType
           )
 
           whenReady(result.value) {
@@ -277,12 +299,15 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when given a valid boxId" - {
       "should return a valid response" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           val expectedMessageNotification =
             MessageNotification(
               s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              notificationType,
+              None,
               None
             )
 
@@ -296,7 +321,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = None,
             messageId = messageId,
-            body = None
+            body = None,
+            notificationType
           )
 
           whenReady(result.value) {
@@ -308,9 +334,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when given a boxId that is not in the database" - {
       "should return a not found response" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
             .thenReturn(Future.successful(Left(UpstreamErrorResponse(boxAssociation.boxId.toString, NOT_FOUND))))
 
@@ -318,7 +345,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = None,
             messageId = messageId,
-            body = None
+            body = None,
+            notificationType
           )
 
           whenReady(result.value) {
@@ -330,9 +358,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when sending a badly formed request" - {
       "should return a response indicating an unexpected error occurred" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        arbitrary[NotificationType]
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, notificationType) =>
           val errorResponse = UpstreamErrorResponse(boxAssociation.boxId.toString, BAD_REQUEST)
           when(mockPushPullNotificationConnector.postNotification(BoxId(any()), any[MessageNotification])(any[ExecutionContext], any[HeaderCarrier]))
             .thenReturn(Future.successful(Left(errorResponse)))
@@ -341,7 +370,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             boxAssociation = boxAssociation,
             contentLength = None,
             messageId = messageId,
-            body = None
+            body = None,
+            notificationType
           )
 
           whenReady(result.value) {
