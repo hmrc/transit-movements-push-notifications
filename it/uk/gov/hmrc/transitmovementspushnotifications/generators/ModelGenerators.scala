@@ -103,7 +103,8 @@ trait ModelGenerators extends BaseGenerators {
       for {
         uri              <- arbitrary[String]
         messageBody      <- arbitrary[Option[String]]
+        response         <- arbitrary[Option[String]]
         notificationType <- arbitrary[NotificationType]
-      } yield MessageNotification(uri, notificationType, messageBody, messageBody)
+      } yield MessageNotification(uri, notificationType, messageBody, response)
     }
 }

@@ -44,6 +44,7 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
+import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
@@ -230,12 +231,16 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
 
       val messageNotificationWithBody = MessageNotification(
         messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
-        messageBody = Some(validPayload)
+        notificationType = NotificationType.MESSAGE_RECEIVED,
+        messageBody = Some(validPayload),
+        None
       )
 
       val messageNotificationWithoutBody = MessageNotification(
         messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
-        messageBody = None
+        notificationType = NotificationType.SUBMISSION_NOTIFICATION,
+        messageBody = None,
+        response = None
       )
 
       "when called with a valid message notification with a body and box id that is in the database" - {
