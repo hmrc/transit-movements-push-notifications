@@ -20,12 +20,14 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
+import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.http.MimeTypes
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc._
+import play.api.libs.Files.TemporaryFileCreator
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
@@ -52,10 +54,12 @@ class PushNotificationController @Inject() (
   boxAssociationFactory: BoxAssociationFactory
 )(implicit
   val materializer: Materializer,
-  ec: ExecutionContext
+  ec: ExecutionContext,
+  temporaryFileCreator: TemporaryFileCreator
 ) extends BackendController(cc)
     with ConvertError
     with ContentTypeRouting
+    with Logging
     with StreamingParsers {
 
   def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
@@ -69,14 +73,12 @@ class PushNotificationController @Inject() (
     }
 
   private def postSmallNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
-    Action.async(streamFromMemory) {
-      implicit request =>
-        val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
-
+    Action.streamWithSize {
+      implicit request => size =>
         (for {
           boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
           result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, contentLength, messageId, Some(request.body), notificationType)
+            .sendPushNotification(boxAssociation, Some(size.toString), messageId, Some(request.body), notificationType)
             .asPresentation
         } yield result).fold[Result](
           baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),

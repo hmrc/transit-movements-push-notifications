@@ -86,7 +86,6 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
   ): EitherT[Future, PushPullNotificationError, Unit] = {
 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
-
     EitherT(
       (body match {
         case None => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, None, None))
@@ -106,8 +105,9 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
               bodyOpt =>
                 if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
                   pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, None, bodyOpt))
-                else
+                else {
                   pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, bodyOpt, None))
+                }
             }
       }).map {
         case Right(_) => Right(())

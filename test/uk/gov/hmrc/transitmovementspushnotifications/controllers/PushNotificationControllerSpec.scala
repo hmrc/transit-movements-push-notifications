@@ -31,6 +31,8 @@ import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.http.Status._
 import play.api.http.HeaderNames
 import play.api.http.MimeTypes
+import play.api.libs.Files.SingletonTemporaryFileCreator
+import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -86,6 +88,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     reset(mockMovementBoxAssociationRepository)
     reset(mockMovementBoxAssociationFactory)
   }
+  implicit val tfc: TemporaryFileCreator = SingletonTemporaryFileCreator
 
   val controller =
     new PushNotificationController(
