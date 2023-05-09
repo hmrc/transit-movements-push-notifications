@@ -18,7 +18,8 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.stream
 
 import akka.NotUsed
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.scalacheck.Gen
 import org.scalatest.OptionValues
@@ -28,10 +29,16 @@ import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.http.Status.OK
 import play.api.libs.Files.SingletonTemporaryFileCreator
-import play.api.mvc.{Action, BaseController}
-import play.api.test.{FakeHeaders, FakeRequest}
-import play.api.test.Helpers.{contentAsString, defaultAwaitTimeout, status, stubControllerComponents}
-import uk.gov.hmrc.transitmovementspushnotifications.base.{TestActorSystem, TestSourceProvider}
+import play.api.mvc.Action
+import play.api.mvc.BaseController
+import play.api.test.FakeHeaders
+import play.api.test.FakeRequest
+import play.api.test.Helpers.contentAsString
+import play.api.test.Helpers.defaultAwaitTimeout
+import play.api.test.Helpers.status
+import play.api.test.Helpers.stubControllerComponents
+import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
+import uk.gov.hmrc.transitmovementspushnotifications.base.TestSourceProvider
 
 import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
