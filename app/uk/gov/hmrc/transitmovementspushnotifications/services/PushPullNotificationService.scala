@@ -48,7 +48,7 @@ trait PushPullNotificationService {
 
   def sendPushNotification(
     boxAssociation: BoxAssociation,
-    contentLength: Option[String],
+    contentLength: Option[Long],
     messageId: MessageId,
     body: Option[Source[ByteString, _]],
     notificationType: NotificationType
@@ -76,7 +76,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
 
   override def sendPushNotification(
     boxAssociation: BoxAssociation,
-    contentLength: Option[String],
+    contentLength: Option[Long],
     messageId: MessageId,
     body: Option[Source[ByteString, _]],
     notificationType: NotificationType
@@ -89,16 +89,10 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
     EitherT(
       (body match {
-
         case None =>
-          if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
-            pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, None))
-          else {
-            pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, None))
-          }
+          postMessageReceivedNotification(boxAssociation, uri, None)
         case Some(body) =>
           contentLength
-            .flatMap(_.toIntOption)
             .filter(_ <= appConfig.maxPushPullPayloadSize)
             .map {
               _ =>
@@ -110,15 +104,10 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
             .getOrElse(Future.successful(None))
             .flatMap {
               bodyOpt =>
-                bodyOpt match {
-                  case Some(bodyOpt) if NotificationType.SUBMISSION_NOTIFICATION == notificationType =>
-                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, Some(Json.parse(bodyOpt))))
-                  case Some(bodyOpt) if NotificationType.MESSAGE_RECEIVED == notificationType =>
-                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, Some(bodyOpt)))
-                  case None if NotificationType.SUBMISSION_NOTIFICATION == notificationType =>
-                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, None))
-                  case None if NotificationType.MESSAGE_RECEIVED == notificationType =>
-                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, None))
+                if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
+                  postSubmissionNotification(boxAssociation, uri, bodyOpt)
+                else {
+                  postMessageReceivedNotification(boxAssociation, uri, bodyOpt)
                 }
 
             }
@@ -137,6 +126,24 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
       }
     )
   }
+
+  private def postSubmissionNotification(boxAssociation: BoxAssociation, uri: String, body: Option[String])(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, Unit]] =
+    body match {
+      case Some(body) => pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, Some(Json.parse(body))))
+      case None       => pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, None))
+    }
+
+  private def postMessageReceivedNotification(boxAssociation: BoxAssociation, uri: String, body: Option[String])(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Either[UpstreamErrorResponse, Unit]] =
+    body match {
+      case Some(body) => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, Some(body)))
+      case None       => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, None))
+    }
 
   private def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     EitherT(

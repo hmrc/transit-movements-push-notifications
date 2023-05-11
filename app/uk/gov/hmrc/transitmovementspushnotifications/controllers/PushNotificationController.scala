@@ -21,13 +21,12 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
 import play.api.Logging
-import play.api.http.HeaderNames
 import play.api.http.MimeTypes
+import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc._
-import play.api.libs.Files.TemporaryFileCreator
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
@@ -65,40 +64,27 @@ class PushNotificationController @Inject() (
   def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
     contentTypeRoute {
       case Some(MimeTypes.XML) =>
-        postSmallNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
+        postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
       case Some(MimeTypes.JSON) =>
-        postSmallNotification(movementId, messageId, NotificationType.SUBMISSION_NOTIFICATION)
+        postNotification(movementId, messageId, NotificationType.SUBMISSION_NOTIFICATION)
       case None =>
-        postLargeNotification(movementId, messageId, NotificationType.SUBMISSION_NOTIFICATION)
+        postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
     }
 
-  private def postSmallNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
+  private def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
     Action.streamWithSize {
+
       implicit request => size =>
         (for {
           boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
           result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, Some(size.toString), messageId, Some(request.body), notificationType)
+            .sendPushNotification(boxAssociation, Some(size), messageId, Some(request.body), notificationType)
             .asPresentation
         } yield result).fold[Result](
           baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
           _ => Accepted
         )
 
-    }
-
-  private def postLargeNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType) =
-    Action.async(parse.anyContent) {
-      implicit request =>
-        (for {
-          boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
-          result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, None, messageId, None, notificationType)
-            .asPresentation
-        } yield result).fold[Result](
-          baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
-          _ => Accepted
-        )
     }
 
   def updateAssociationTTL(movementId: MovementId): Action[AnyContent] = Action.async {
