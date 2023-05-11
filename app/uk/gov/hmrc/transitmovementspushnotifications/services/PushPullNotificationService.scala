@@ -48,9 +48,9 @@ trait PushPullNotificationService {
 
   def sendPushNotification(
     boxAssociation: BoxAssociation,
-    contentLength: Option[Long],
+    contentLength: Long,
     messageId: MessageId,
-    body: Option[Source[ByteString, _]],
+    body: Source[ByteString, _],
     notificationType: NotificationType
   )(implicit
     ec: ExecutionContext,
@@ -76,9 +76,9 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
 
   override def sendPushNotification(
     boxAssociation: BoxAssociation,
-    contentLength: Option[Long],
+    contentLength: Long,
     messageId: MessageId,
-    body: Option[Source[ByteString, _]],
+    body: Source[ByteString, _],
     notificationType: NotificationType
   )(implicit
     ec: ExecutionContext,
@@ -87,43 +87,43 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
   ): EitherT[Future, PushPullNotificationError, Unit] = {
 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
-    EitherT(
-      (body match {
-        case None =>
-          postMessageReceivedNotification(boxAssociation, uri, None)
-        case Some(body) =>
-          contentLength
-            .filter(_ <= appConfig.maxPushPullPayloadSize)
-            .map {
-              _ =>
-                body
-                  .reduce(_ ++ _)
-                  .map(_.utf8String)
-                  .runWith(Sink.headOption)
-            }
-            .getOrElse(Future.successful(None))
-            .flatMap {
-              bodyOpt =>
-                if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
-                  postSubmissionNotification(boxAssociation, uri, bodyOpt)
-                else {
-                  postMessageReceivedNotification(boxAssociation, uri, bodyOpt)
-                }
 
-            }
-      }).map {
-        case Right(_) => Right(())
-        case Left(error) =>
-          error.statusCode match {
-            case NOT_FOUND =>
-              logger.warn(
-                s"Attempted to send notification for movement '${boxAssociation._id.value}' to box ID '${boxAssociation.boxId.value}', but the box no longer exists."
-              )
-              Left(BoxNotFound(boxAssociation.boxId))
-            case _ => Left(UnexpectedError(Some(error)))
-
-          }
+    def selectNotificationType(bodyOpt: Option[String]) =
+      if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
+        postSubmissionNotification(boxAssociation, uri, bodyOpt)
+      else {
+        postMessageReceivedNotification(boxAssociation, uri, bodyOpt)
       }
+
+    EitherT(
+      {
+        contentLength match {
+          case 0L => postMessageReceivedNotification(boxAssociation, uri, None)
+          case contentLength if contentLength <= appConfig.maxPushPullPayloadSize =>
+            body
+              .reduce(_ ++ _)
+              .map(_.utf8String)
+              .runWith(Sink.headOption)
+              .flatMap {
+                bodyOpt =>
+                  selectNotificationType(bodyOpt)
+              }
+          case contentLength if contentLength > appConfig.maxPushPullPayloadSize => selectNotificationType(None)
+        }
+      }
+        .map {
+          case Right(_) => Right(())
+          case Left(error) =>
+            error.statusCode match {
+              case NOT_FOUND =>
+                logger.warn(
+                  s"Attempted to send notification for movement '${boxAssociation._id.value}' to box ID '${boxAssociation.boxId.value}', but the box no longer exists."
+                )
+                Left(BoxNotFound(boxAssociation.boxId))
+              case _ => Left(UnexpectedError(Some(error)))
+
+            }
+        }
     )
   }
 

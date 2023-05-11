@@ -383,9 +383,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
-              any[Option[Long]],
+              any[Long],
               MessageId(eqTo(messageId.value)),
-              any[Option[Source[ByteString, _]]],
+              any[Source[ByteString, _]],
               eqTo(NotificationType.MESSAGE_RECEIVED)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
@@ -412,9 +412,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
-              any[Option[Long]],
+              any[Long],
               MessageId(eqTo(messageId.value)),
-              any[Option[Source[ByteString, _]]],
+              any[Source[ByteString, _]],
               eqTo(NotificationType.MESSAGE_RECEIVED)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
@@ -444,9 +444,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
-              any[Option[Long]],
+              any[Long],
               MessageId(eqTo(messageId.value)),
-              any[Option[Source[ByteString, _]]],
+              any[Source[ByteString, _]],
               eqTo(NotificationType.SUBMISSION_NOTIFICATION)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
@@ -471,9 +471,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
             mockPushPullNotificationService
               .sendPushNotification(
                 eqTo(boxAssociation),
-                any[Option[Long]],
+                any[Long],
                 MessageId(eqTo(messageId.value)),
-                any[Option[Source[ByteString, _]]],
+                any[Source[ByteString, _]],
                 eqTo(NotificationType.MESSAGE_RECEIVED)
               )(
                 any[ExecutionContext],
@@ -502,9 +502,9 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
             mockPushPullNotificationService
               .sendPushNotification(
                 eqTo(boxAssociation),
-                any[Option[Long]],
+                any[Long],
                 MessageId(eqTo(messageId.value)),
-                any[Option[Source[ByteString, _]]],
+                any[Source[ByteString, _]],
                 eqTo(NotificationType.MESSAGE_RECEIVED)
               )(
                 any[ExecutionContext],

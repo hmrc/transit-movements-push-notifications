@@ -196,9 +196,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
           val result = sut.sendPushNotification(
             boxAssociation = boxAssociation,
-            contentLength = Some(maxPayloadSize - 1),
+            contentLength = maxPayloadSize - 1,
             messageId = messageId,
-            body = Some(source),
+            body = source,
             notificationType
           )
 
@@ -247,9 +247,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
           val result = sut.sendPushNotification(
             boxAssociation = boxAssociation,
-            contentLength = Some(maxPayloadSize + 1),
+            contentLength = maxPayloadSize + 1,
             messageId = messageId,
-            body = Some(source),
+            body = source,
             notificationType
           )
 
@@ -279,9 +279,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
           val result = sut.sendPushNotification(
             boxAssociation = boxAssociation,
-            contentLength = None,
+            contentLength = 0L,
             messageId = messageId,
-            body = None,
+            body = Source.single(ByteString("", StandardCharsets.UTF_8)),
             NotificationType.MESSAGE_RECEIVED
           )
 
@@ -327,9 +327,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
           val result = sut.sendPushNotification(
             boxAssociation = boxAssociation,
-            contentLength = Some(maxPayloadSize - 1),
+            contentLength = maxPayloadSize - 1,
             messageId = messageId,
-            body = Some(source),
+            body = source,
             notificationType
           )
 
@@ -375,9 +375,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
           val result = sut.sendPushNotification(
             boxAssociation = boxAssociation,
-            contentLength = Some(maxPayloadSize - 1),
+            contentLength = maxPayloadSize - 1,
             messageId = messageId,
-            body = Some(source),
+            body = source,
             notificationType
           )
 

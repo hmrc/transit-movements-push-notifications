@@ -78,7 +78,7 @@ class PushNotificationController @Inject() (
         (for {
           boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
           result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, Some(size), messageId, Some(request.body), notificationType)
+            .sendPushNotification(boxAssociation, size, messageId, request.body, notificationType)
             .asPresentation
         } yield result).fold[Result](
           baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
