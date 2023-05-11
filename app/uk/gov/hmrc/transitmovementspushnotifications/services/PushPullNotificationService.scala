@@ -24,6 +24,7 @@ import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.http.Status._
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
@@ -88,7 +89,13 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
     EitherT(
       (body match {
-        case None => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, None, None))
+
+        case None =>
+          if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
+            pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, None))
+          else {
+            pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, None))
+          }
         case Some(body) =>
           contentLength
             .flatMap(_.toIntOption)
@@ -103,11 +110,17 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
             .getOrElse(Future.successful(None))
             .flatMap {
               bodyOpt =>
-                if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
-                  pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, None, bodyOpt))
-                else {
-                  pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageNotification(uri, notificationType, bodyOpt, None))
+                bodyOpt match {
+                  case Some(bodyOpt) if NotificationType.SUBMISSION_NOTIFICATION == notificationType =>
+                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, Some(Json.parse(bodyOpt))))
+                  case Some(bodyOpt) if NotificationType.MESSAGE_RECEIVED == notificationType =>
+                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, Some(bodyOpt)))
+                  case None if NotificationType.SUBMISSION_NOTIFICATION == notificationType =>
+                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, None))
+                  case None if NotificationType.MESSAGE_RECEIVED == notificationType =>
+                    pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, None))
                 }
+
             }
       }).map {
         case Right(_) => Right(())

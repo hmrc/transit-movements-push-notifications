@@ -51,7 +51,7 @@ trait PushPullNotificationConnector {
     hc: HeaderCarrier
   ): Future[Seq[BoxResponse]]
 
-  def postNotification(boxId: BoxId, messageNotification: MessageNotification)(implicit
+  def postNotification(boxId: BoxId, notification: Notification)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, Unit]]
@@ -95,7 +95,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
       }
   }
 
-  override def postNotification(boxId: BoxId, messageNotification: MessageNotification)(implicit
+  override def postNotification(boxId: BoxId, notification: Notification)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Either[UpstreamErrorResponse, Unit]] = {
@@ -105,7 +105,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     httpClientV2
       .post(url"$url")
       .setHeader(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)
-      .withBody(Json.toJson(messageNotification))
+      .withBody(Json.toJson(notification))
       .execute[Either[UpstreamErrorResponse, HttpResponse]]
       .map {
         case Right(_)    => Right(())

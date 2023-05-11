@@ -30,12 +30,12 @@ import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
 import org.scalatest.time.Span
 import play.api.libs.json.Json
-import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
 import play.api.test.Helpers.BAD_REQUEST
 import play.api.test.Helpers.FORBIDDEN
 import play.api.test.Helpers.INTERNAL_SERVER_ERROR
 import play.api.test.Helpers.NOT_FOUND
 import play.api.test.Helpers.OK
+import play.api.test.Helpers.REQUEST_ENTITY_TOO_LARGE
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.running
@@ -43,8 +43,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
-import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageReceivedNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
@@ -229,18 +228,14 @@ class PushNotificationConnectorSpec extends AnyFreeSpec with Matchers with Scala
       val boxId        = arbitraryBoxId.arbitrary.sample.value
       val validPayload = """{"message":"<CC007C>data</CC007C>"}"""
 
-      val messageNotificationWithBody = MessageNotification(
+      val messageNotificationWithBody = MessageReceivedNotification(
         messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
-        notificationType = NotificationType.MESSAGE_RECEIVED,
-        messageBody = Some(validPayload),
-        None
+        messageBody = Some(validPayload)
       )
 
-      val messageNotificationWithoutBody = MessageNotification(
+      val messageNotificationWithoutBody = MessageReceivedNotification(
         messageUri = "/customs/transits/movements/departures/movement-id-1/messages/message-id-1",
-        notificationType = NotificationType.SUBMISSION_NOTIFICATION,
-        messageBody = None,
-        response = None
+        messageBody = None
       )
 
       "when called with a valid message notification with a body and box id that is in the database" - {
