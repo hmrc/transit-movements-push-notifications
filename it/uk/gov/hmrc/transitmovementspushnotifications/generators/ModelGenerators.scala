@@ -19,13 +19,7 @@ package uk.gov.hmrc.transitmovementspushnotifications.generators
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageNotification
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
-import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
+import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -98,13 +92,4 @@ trait ModelGenerators extends BaseGenerators {
   implicit lazy val arbitraryNotificationType: Arbitrary[NotificationType] =
     Arbitrary(Gen.oneOf(NotificationType.values))
 
-  implicit lazy val arbitraryMessageNotification: Arbitrary[MessageNotification] =
-    Arbitrary {
-      for {
-        uri              <- arbitrary[String]
-        messageBody      <- arbitrary[Option[String]]
-        response         <- arbitrary[Option[String]]
-        notificationType <- arbitrary[NotificationType]
-      } yield MessageNotification(uri, notificationType, messageBody, response)
-    }
 }
