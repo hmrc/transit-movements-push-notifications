@@ -389,6 +389,4 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   }
 
-  "sendPushNotification Large Messages" - {}
-
 }
