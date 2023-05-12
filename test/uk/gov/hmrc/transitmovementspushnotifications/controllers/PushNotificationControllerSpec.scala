@@ -412,7 +412,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
-              any[Long],
+              eqTo(0L),
               MessageId(eqTo(messageId.value)),
               any[Source[ByteString, _]],
               eqTo(NotificationType.MESSAGE_RECEIVED)

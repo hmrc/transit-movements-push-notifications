@@ -99,7 +99,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
       {
         contentLength match {
           case 0L => postMessageReceivedNotification(boxAssociation, uri, None)
-          case contentLength if contentLength <= appConfig.maxPushPullPayloadSize =>
+          case x if contentLength <= appConfig.maxPushPullPayloadSize =>
             body
               .reduce(_ ++ _)
               .map(_.utf8String)
