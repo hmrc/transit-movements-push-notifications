@@ -25,10 +25,12 @@ import org.scalacheck.Gen
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
+import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.http.Status.OK
 import play.api.libs.Files.SingletonTemporaryFileCreator
-import play.api.mvc._
+import play.api.mvc.Action
+import play.api.mvc.BaseController
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsString
@@ -37,32 +39,16 @@ import play.api.test.Helpers.status
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestSourceProvider
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.request.BodyReplaceableRequest
 
 import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSystem with OptionValues with TestSourceProvider {
 
   lazy val headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "text/plain", HeaderNames.ACCEPT -> "application/vnd.hmrc.2.0+json"))
 
-  case class TestBodyReplaceableRequest[A](request: Request[A]) extends BodyReplaceableRequest[TestBodyReplaceableRequest, A](request) {
-    override def replaceBody(body: A): TestBodyReplaceableRequest[A] = TestBodyReplaceableRequest(request.withBody(body))
-  }
-
-  object TestActionBuilder extends ActionRefiner[Request, TestBodyReplaceableRequest] with ActionBuilder[Request, AnyContent] {
-
-    override protected def refine[A](request: Request[A]): Future[Either[Result, TestBodyReplaceableRequest[A]]] =
-      Future.successful(Right(TestBodyReplaceableRequest(request)))
-
-    override protected def executionContext: ExecutionContext = scala.concurrent.ExecutionContext.global
-
-    override def parser: BodyParser[AnyContent] = stubControllerComponents().parsers.defaultBodyParser
-  }
-
-  object Harness extends BaseController with StreamingParsers {
+  object Harness extends BaseController with StreamingParsers with Logging {
 
     override val controllerComponents = stubControllerComponents()
     implicit val temporaryFileCreator = SingletonTemporaryFileCreator
@@ -77,7 +63,7 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
         Future.successful(Ok(request.body))
     }
 
-    def resultStream: Action[Source[ByteString, _]] = Action.andThen(TestActionBuilder).stream {
+    def resultStream: Action[Source[ByteString, _]] = Action.stream {
       request =>
         (for {
           a <- request.body.runWith(Sink.head)
@@ -87,6 +73,7 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
             r => Ok(r)
           )
     }
+
   }
 
   @tailrec
@@ -98,7 +85,7 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
     }
 
   private def generateSource(byteString: ByteString): Source[ByteString, NotUsed] =
-    Source(byteString.grouped(1024).toList)
+    Source(byteString.grouped(1024).toSeq)
 
   "Streaming" - {
     "from Memory" - {
@@ -121,7 +108,6 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
       status(result) mustBe OK
       contentAsString(result) mustBe (string ++ string)
     }
-
   }
 
 }
