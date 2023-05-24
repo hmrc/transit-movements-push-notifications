@@ -20,7 +20,9 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import cats.data.EitherT
-import play.api.http.HeaderNames
+import play.api.Logging
+import play.api.http.MimeTypes
+import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -31,6 +33,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.Presenta
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.stream.StreamingParsers
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
@@ -50,46 +53,38 @@ class PushNotificationController @Inject() (
   boxAssociationFactory: BoxAssociationFactory
 )(implicit
   val materializer: Materializer,
-  ec: ExecutionContext
+  ec: ExecutionContext,
+  temporaryFileCreator: TemporaryFileCreator
 ) extends BackendController(cc)
     with ConvertError
     with ContentTypeRouting
+    with Logging
     with StreamingParsers {
 
   def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
     contentTypeRoute {
-      case Some(_) =>
-        postSmallNotification(movementId, messageId)
+      case Some(MimeTypes.XML) =>
+        postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
+      case Some(MimeTypes.JSON) =>
+        postNotification(movementId, messageId, NotificationType.SUBMISSION_NOTIFICATION)
       case None =>
-        postLargeNotification(movementId, messageId)
+        postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
     }
 
-  private def postSmallNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
-    implicit request =>
-      val contentLength = request.headers.get(HeaderNames.CONTENT_LENGTH)
+  private def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
+    Action.streamWithSize {
 
-      (for {
-        boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
-        result         <- pushPullNotificationService.sendPushNotification(boxAssociation, contentLength, messageId, Some(request.body)).asPresentation
-      } yield result).fold[Result](
-        baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
-        _ => Accepted
-      )
-
-  }
-
-  private def postLargeNotification(movementId: MovementId, messageId: MessageId) =
-    Action.async(parse.anyContent) {
-      implicit request =>
+      implicit request => size =>
         (for {
           boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
           result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, None, messageId, None)
+            .sendPushNotification(boxAssociation, size, messageId, request.body, notificationType)
             .asPresentation
         } yield result).fold[Result](
           baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
           _ => Accepted
         )
+
     }
 
   def updateAssociationTTL(movementId: MovementId): Action[AnyContent] = Action.async {
