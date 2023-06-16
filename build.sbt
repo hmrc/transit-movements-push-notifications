@@ -18,7 +18,6 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
       "uk.gov.hmrc.transitmovementspushnotifications.models._"
     )
   )
-  .settings(publishingSettings: _*)
   .configs(IntegrationTest)
   .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
