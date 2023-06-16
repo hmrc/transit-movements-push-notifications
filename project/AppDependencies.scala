@@ -9,10 +9,11 @@ object AppDependencies {
   private val catsVersion          = "2.6.1"
 
   val compile = Seq(
-    "uk.gov.hmrc"       %% "bootstrap-backend-play-28" % bootstrapPlayVersion,
-    "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"        % "0.73.0",
-    "io.lemonlabs"      %% "scala-uri"                 % "4.0.2",
-    "org.typelevel"     %% "cats-core"                 % catsVersion
+    "uk.gov.hmrc"       %% "bootstrap-backend-play-28"    % bootstrapPlayVersion,
+    "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-28"           % "0.73.0",
+    "io.lemonlabs"      %% "scala-uri"                    % "4.0.2",
+    "org.typelevel"     %% "cats-core"                    % catsVersion,
+    "uk.gov.hmrc"       %% "internal-auth-client-play-28" % "1.4.0"
   )
 
   val test = Seq(

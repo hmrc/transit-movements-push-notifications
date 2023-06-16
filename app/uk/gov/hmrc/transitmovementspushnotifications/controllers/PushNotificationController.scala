@@ -27,7 +27,13 @@ import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc._
+import uk.gov.hmrc.internalauth.client.IAAction
+import uk.gov.hmrc.internalauth.client.Predicate
+import uk.gov.hmrc.internalauth.client.Resource
+import uk.gov.hmrc.internalauth.client.ResourceLocation
+import uk.gov.hmrc.internalauth.client.ResourceType
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.InternalAuthActionProvider
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.stream.StreamingParsers
@@ -50,7 +56,8 @@ class PushNotificationController @Inject() (
   cc: ControllerComponents,
   pushPullNotificationService: PushPullNotificationService,
   boxAssociationRepository: BoxAssociationRepository,
-  boxAssociationFactory: BoxAssociationFactory
+  boxAssociationFactory: BoxAssociationFactory,
+  internalAuth: InternalAuthActionProvider
 )(implicit
   val materializer: Materializer,
   ec: ExecutionContext,
@@ -60,6 +67,22 @@ class PushNotificationController @Inject() (
     with ContentTypeRouting
     with Logging
     with StreamingParsers {
+
+  private val notificationPermission = Predicate.Permission(
+    Resource(
+      ResourceType("transit-movements-push-notifications"),
+      ResourceLocation("notification")
+    ),
+    IAAction("WRITE")
+  )
+
+  private val associatePermission = Predicate.Permission(
+    Resource(
+      ResourceType("transit-movements-push-notifications"),
+      ResourceLocation("association")
+    ),
+    IAAction("WRITE")
+  )
 
   def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
     contentTypeRoute {
@@ -72,7 +95,7 @@ class PushNotificationController @Inject() (
     }
 
   private def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
-    Action.streamWithSize {
+    internalAuth(notificationPermission).streamWithSize {
 
       implicit request => size =>
         (for {
@@ -87,7 +110,7 @@ class PushNotificationController @Inject() (
 
     }
 
-  def updateAssociationTTL(movementId: MovementId): Action[AnyContent] = Action.async {
+  def updateAssociationTTL(movementId: MovementId): Action[AnyContent] = internalAuth(associatePermission).async {
     boxAssociationRepository
       .update(movementId)
       .asPresentation
@@ -97,7 +120,7 @@ class PushNotificationController @Inject() (
       )
   }
 
-  def createBoxAssociation(movementId: MovementId): Action[JsValue] = Action.async(parse.json) {
+  def createBoxAssociation(movementId: MovementId): Action[JsValue] = internalAuth(associatePermission).async(parse.json) {
     implicit request =>
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
