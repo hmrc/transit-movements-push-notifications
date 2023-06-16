@@ -54,8 +54,9 @@ class InternalAuthActionProviderSpec extends AnyFreeSpec with Matchers with Mock
         val mockBackendAuthComponents = mock[BackendAuthComponents]
         when(mockBackendAuthComponents.authorizedAction(any[Predicate], eqTo(EmptyRetrieval), any(), any())).thenReturn(mockActionBuilder)
 
-        val samplePermission = Predicate.Permission(Resource(ResourceType("transit-movements-push-notifications"), ResourceLocation("notification")), IAAction("WRITE"))
-        val sut              = new InternalAuthActionProviderImpl(appConfig, mockBackendAuthComponents, stubControllerComponents())
+        val samplePermission =
+          Predicate.Permission(Resource(ResourceType("transit-movements-push-notifications"), ResourceLocation("notification")), IAAction("WRITE"))
+        val sut = new InternalAuthActionProviderImpl(appConfig, mockBackendAuthComponents, stubControllerComponents())
 
         sut(samplePermission) mustBe a[DefaultActionBuilder]
       }
@@ -73,8 +74,9 @@ class InternalAuthActionProviderSpec extends AnyFreeSpec with Matchers with Mock
         val mockBackendAuthComponents = mock[BackendAuthComponents]
         when(mockBackendAuthComponents.authorizedAction(any[Predicate], eqTo(EmptyRetrieval), any(), any())).thenReturn(mockActionBuilder)
 
-        val samplePermission = Predicate.Permission(Resource(ResourceType("transit-movements-push-notifications"), ResourceLocation("notification")), IAAction("WRITE"))
-        val sut              = new InternalAuthActionProviderImpl(appConfig, mockBackendAuthComponents, stubControllerComponents())
+        val samplePermission =
+          Predicate.Permission(Resource(ResourceType("transit-movements-push-notifications"), ResourceLocation("notification")), IAAction("WRITE"))
+        val sut = new InternalAuthActionProviderImpl(appConfig, mockBackendAuthComponents, stubControllerComponents())
 
         sut(samplePermission) mustBe mockActionBuilder
       }
