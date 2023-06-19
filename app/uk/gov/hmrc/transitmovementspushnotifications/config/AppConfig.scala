@@ -32,4 +32,6 @@ class AppConfig @Inject() (config: Configuration, servicesConfig: ServicesConfig
 
   lazy val maxPushPullPayloadSize: Int = config.get[Int]("pushPullNotificationServiceMessageLimit")
 
+  lazy val internalAuthEnabled: Boolean = config.get[Boolean]("microservices.service.internal-auth.enabled")
+
 }
