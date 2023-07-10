@@ -91,8 +91,9 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
 
     def createNotification(body: Option[String]) = notificationType match {
-      case NotificationType.MESSAGE_RECEIVED        => MessageReceivedNotification(uri, messageType, body)
-      case NotificationType.SUBMISSION_NOTIFICATION => SubmissionNotification(uri, body.map(Json.parse))
+      case NotificationType.MESSAGE_RECEIVED => MessageReceivedNotification(uri, messageId, boxAssociation._id, boxAssociation.movementType, messageType, body)
+      case NotificationType.SUBMISSION_NOTIFICATION =>
+        SubmissionNotification(uri, messageId, boxAssociation._id, boxAssociation.movementType, body.map(Json.parse))
     }
 
     EitherT(

@@ -16,90 +16,57 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.models
 
+import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
-import play.api.libs.json.JsError
-import play.api.libs.json.JsSuccess
 import play.api.libs.json.Json
+import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 
-class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPropertyChecks {
-  private val gen = Gen.listOfN(10, Gen.alphaChar).map(_.mkString)
+class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPropertyChecks with ModelGenerators {
+  private val gen = Gen.stringOfN(10, Gen.alphaChar)
 
-  val validJSONBody = Json.toJson(
-    Json.obj(
-      "code" -> "SUCCESS",
-      "message" ->
-        s"The message for movement was successfully processed"
-    )
-  )
-
-  "when MessageReceivedNotification JsObject is deserialized, return a MessageReceivedNotification" in forAll(gen, gen) {
-    (messageUri, messageBody) =>
-      val actual = Notification.messageReceivedNotificationFormat.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody)
+  "when MessageReceivedNotification is serialized for a departure, return an appropriate JsObject" in forAll(
+    gen,
+    gen,
+    arbitrary[MovementId],
+    arbitrary[MessageId],
+    gen,
+    arbitrary[MovementType]
+  ) {
+    (messageUri, messageBody, movementId, messageId, messageType, movementType) =>
+      val actual = Notification.notificationWrites.writes(
+        MessageReceivedNotification(messageUri, messageId, movementId, movementType, Some(MessageType(messageType)), Some(messageBody))
       )
-      val expected = MessageReceivedNotification(messageUri, None, Some(messageBody))
-      actual mustBe JsSuccess(expected)
-  }
-
-  "when SubmissionNotification JsObject is deserialized, return a SubmissionNotification" in forAll(gen) {
-    messageUri =>
-      val actual = Notification.submissionNotificationFormat.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "SUBMISSION_NOTIFICATION", "response" -> validJSONBody)
+      val expected = Json.obj(
+        "messageUri"                              -> messageUri,
+        "notificationType"                        -> "MESSAGE_RECEIVED",
+        "messageType"                             -> messageType,
+        s"${movementType.toString.toLowerCase}Id" -> movementId.value,
+        "messageId"                               -> messageId.value,
+        "messageBody"                             -> messageBody
       )
-      val expected = SubmissionNotification(messageUri, Some(validJSONBody))
-      actual mustBe JsSuccess(expected)
-  }
-
-  "when Notification JsObject is deserialized for MESSAGE_RECEIVED, return a MessageReceivedNotification" in forAll(gen, gen, Gen.option(gen)) {
-    (messageUri, messageBody, messageTypeMaybe) =>
-      val actual = Notification.notificationReads.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody) ++
-          messageTypeMaybe
-            .map(
-              x => Json.obj("messageType" -> x)
-            )
-            .getOrElse(Json.obj())
-      )
-      val expected = MessageReceivedNotification(messageUri, messageTypeMaybe.map(MessageType.apply), Some(messageBody))
-      actual mustBe JsSuccess(expected)
-  }
-
-  "when Notification JsObject is deserialized for SUBMISSION_NOTIFICATION, return a SubmissionNotification" in forAll(gen, Gen.option(gen)) {
-    (messageUri, messageTypeMaybe) =>
-      val actual = Notification.notificationReads.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "SUBMISSION_NOTIFICATION", "response" -> validJSONBody) ++
-          messageTypeMaybe
-            .map(
-              x => Json.obj("messageType" -> x)
-            )
-            .getOrElse(Json.obj())
-      )
-      val expected = SubmissionNotification(messageUri, Some(validJSONBody))
-      actual mustBe JsSuccess(expected)
-  }
-
-  "when Notification JsObject is deserialized for unknown Notification type, return a JsError" in forAll(gen) {
-    messageUri =>
-      val actual = Notification.notificationReads.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "unknown", "response" -> validJSONBody)
-      )
-      actual mustBe JsError("Invalid")
-  }
-
-  "when MessageReceivedNotification is serialized, return an appropriate JsObject" in forAll(gen, gen) {
-    (messageUri, messageBody) =>
-      val actual   = Notification.notificationWrites.writes(MessageReceivedNotification(messageUri, None, Some(messageBody)))
-      val expected = Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody)
       actual mustBe expected
   }
 
-  "when SubmissionNotification is serialized, return an appropriate JsObject" in forAll(gen) {
-    messageUri =>
-      val actual   = Notification.notificationWrites.writes(SubmissionNotification(messageUri, Some(validJSONBody)))
-      val expected = Json.obj("messageUri" -> messageUri, "notificationType" -> "SUBMISSION_NOTIFICATION", "response" -> validJSONBody)
+  "when SubmissionNotification is serialized, return an appropriate JsObject" in forAll(
+    gen,
+    gen,
+    arbitrary[MovementId],
+    arbitrary[MessageId],
+    arbitrary[MovementType]
+  ) {
+    (messageUri, messageBody, movementId, messageId, movementType) =>
+      val actual =
+        Notification.notificationWrites.writes(SubmissionNotification(messageUri, messageId, movementId, movementType, Some(Json.obj("test" -> messageBody))))
+      val expected = Json.obj(
+        "messageUri"                              -> messageUri,
+        "notificationType"                        -> "SUBMISSION_NOTIFICATION",
+        s"${movementType.toString.toLowerCase}Id" -> movementId.value,
+        "messageId"                               -> messageId.value,
+        "response"                                -> Json.obj("test" -> messageBody)
+      )
       actual mustBe expected
   }
 

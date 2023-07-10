@@ -19,36 +19,67 @@ package uk.gov.hmrc.transitmovementspushnotifications.models
 import play.api.libs.json._
 
 sealed trait Notification extends Product with Serializable {
+  @transient val movementId: MovementId
+  @transient val movementType: MovementType
   val messageUri: String
+  val messageId: MessageId
   val notificationType: NotificationType
 }
 
-case class MessageReceivedNotification(messageUri: String, messageType: Option[MessageType], messageBody: Option[String]) extends Notification {
+case class MessageReceivedNotification(
+  messageUri: String,
+  messageId: MessageId,
+  movementId: MovementId,
+  movementType: MovementType,
+  messageType: Option[MessageType],
+  messageBody: Option[String]
+) extends Notification {
   override val notificationType: NotificationType = NotificationType.MESSAGE_RECEIVED
 }
 
-case class SubmissionNotification(messageUri: String, response: Option[JsValue]) extends Notification {
+case class SubmissionNotification(messageUri: String, messageId: MessageId, movementId: MovementId, movementType: MovementType, response: Option[JsValue])
+    extends Notification {
   override val notificationType: NotificationType = NotificationType.SUBMISSION_NOTIFICATION
 }
 
 object Notification {
-  implicit val messageReceivedNotificationFormat: OFormat[MessageReceivedNotification] = Json.format[MessageReceivedNotification]
-  implicit val submissionNotificationFormat: OFormat[SubmissionNotification]           = Json.format[SubmissionNotification]
 
-  implicit val notificationReads: Reads[Notification] = Reads[Notification] {
-    jsValue =>
-      jsValue \ "notificationType" match {
-        case JsDefined(JsString("MESSAGE_RECEIVED"))        => messageReceivedNotificationFormat.reads(jsValue)
-        case JsDefined(JsString("SUBMISSION_NOTIFICATION")) => submissionNotificationFormat.reads(jsValue)
-        case _                                              => JsError("Invalid")
-      }
+  private def movementId(movementId: MovementId, movementType: MovementType): JsObject =
+    if (movementType == MovementType.Departure) Json.obj("departureId" -> movementId.value)
+    else Json.obj("arrivalId"                                          -> movementId.value)
+
+  private val messageReceivedNotificationWrites: OWrites[MessageReceivedNotification] = OWrites {
+    notification =>
+      notification.messageType
+        .map(
+          x => Json.obj("messageType" -> x)
+        )
+        .getOrElse(Json.obj()) ++
+        notification.messageBody
+          .map(
+            x => Json.obj("messageBody" -> x)
+          )
+          .getOrElse(Json.obj())
+  }
+
+  private val submissionNotificationWrites: OWrites[SubmissionNotification] = OWrites {
+    notification =>
+      notification.response
+        .map(
+          x => Json.obj("response" -> x)
+        )
+        .getOrElse(Json.obj())
   }
 
   implicit val notificationWrites: OWrites[Notification] = OWrites[Notification] {
     notification =>
-      Json.obj("notificationType" -> notification.notificationType) ++ (notification match {
-        case x: MessageReceivedNotification => messageReceivedNotificationFormat.writes(x)
-        case x: SubmissionNotification      => submissionNotificationFormat.writes(x)
+      Json.obj(
+        "messageUri"       -> notification.messageUri,
+        "notificationType" -> notification.notificationType.toString,
+        "messageId"        -> notification.messageId.value
+      ) ++ movementId(notification.movementId, notification.movementType) ++ (notification match {
+        case x: MessageReceivedNotification => messageReceivedNotificationWrites.writes(x)
+        case x: SubmissionNotification      => submissionNotificationWrites.writes(x)
       })
   }
 }

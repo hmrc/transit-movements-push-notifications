@@ -50,6 +50,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageReceivedNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
@@ -244,11 +245,15 @@ class PushNotificationConnectorSpec
           arbitrary[MessageId],
           arbitrary[MovementId],
           Gen.alphaNumStr,
-          arbitrary[MessageType]
+          arbitrary[MessageType],
+          arbitrary[MovementType]
         ) {
-          (boxId, messageId, movementId, body, messageType) =>
+          (boxId, messageId, movementId, body, messageType, movementType) =>
             val messageNotificationWithBody = MessageReceivedNotification(
               messageUri = s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
+              movementId = movementId,
+              messageId = messageId,
+              movementType = movementType,
               messageBody = Some(body),
               messageType = Some(messageType)
             )
@@ -260,6 +265,8 @@ class PushNotificationConnectorSpec
                     |{
                     |   "messageUri": "/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
                     |   "notificationType": "MESSAGE_RECEIVED",
+                    |   "${movementType.toString.toLowerCase}Id": "${movementId.value}",
+                    |   "messageId": "${messageId.value}",
                     |   "messageBody": "$body",
                     |   "messageType": "${messageType.value}"
                     |}
@@ -283,10 +290,19 @@ class PushNotificationConnectorSpec
       }
 
       "when called with a valid message notification with no body and box id that is in the database" - {
-        "should return Unit () when the post is successful" in forAll(arbitrary[BoxId], arbitrary[MessageId], arbitrary[MovementId], arbitrary[MessageType]) {
-          (boxId, messageId, movementId, messageType) =>
+        "should return Unit () when the post is successful" in forAll(
+          arbitrary[BoxId],
+          arbitrary[MessageId],
+          arbitrary[MovementId],
+          arbitrary[MessageType],
+          arbitrary[MovementType]
+        ) {
+          (boxId, messageId, movementId, messageType, movementType) =>
             val messageNotificationWithoutBody = MessageReceivedNotification(
               messageUri = s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
+              movementId = movementId,
+              messageId = messageId,
+              movementType = movementType,
               messageBody = None,
               messageType = Some(messageType)
             )
@@ -297,6 +313,8 @@ class PushNotificationConnectorSpec
                     s"""
                      |{
                      |   "messageUri": "/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
+                     |   "${movementType.toString.toLowerCase}Id": "${movementId.value}",
+                     |   "messageId": "${messageId.value}",
                      |   "notificationType": "MESSAGE_RECEIVED",
                      |   "messageType": "${messageType.value}"
                      |}
@@ -321,10 +339,19 @@ class PushNotificationConnectorSpec
 
       for (error <- List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE))
         "when called with an invalid request" - {
-          s"should return error an error response: $error" in forAll(arbitrary[BoxId], arbitrary[MessageId], arbitrary[MovementId], arbitrary[MessageType]) {
-            (boxId, messageId, movementId, messageType) =>
+          s"should return error an error response: $error" in forAll(
+            arbitrary[BoxId],
+            arbitrary[MessageId],
+            arbitrary[MovementId],
+            arbitrary[MessageType],
+            arbitrary[MovementType]
+          ) {
+            (boxId, messageId, movementId, messageType, movementType) =>
               val messageNotificationWithoutBody = MessageReceivedNotification(
                 messageUri = s"/customs/transits/movements/departures/$movementId/messages/$messageId",
+                movementId = movementId,
+                messageId = messageId,
+                movementType = movementType,
                 messageBody = None,
                 messageType = Some(messageType)
               )

@@ -172,6 +172,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   messageTypeMaybe,
                   Some(sampleString)
                 ),
@@ -182,6 +185,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 SubmissionNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   Some(validJSONBody)
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
@@ -226,6 +232,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   messageTypeMaybe,
                   None
                 ),
@@ -236,6 +245,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 SubmissionNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   None
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
@@ -275,6 +287,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
           val expectedMessageNotification =
             MessageReceivedNotification(
               s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              messageId,
+              boxAssociation._id,
+              boxAssociation.movementType,
               messageTypeMaybe,
               None
             )
@@ -313,6 +328,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   messageTypeMaybe,
                   Some(sampleString)
                 ),
@@ -323,6 +341,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 SubmissionNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   Some(validJSONBody)
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
@@ -364,6 +385,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   messageTypeMaybe,
                   Some(sampleString)
                 ),
@@ -374,6 +398,9 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 SubmissionNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageId,
+                  boxAssociation._id,
+                  boxAssociation.movementType,
                   Some(validJSONBody)
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
