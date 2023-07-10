@@ -15,7 +15,8 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
     scalacOptions += "-Wconf:src=routes/.*:s",
     // Import models by default in route files
     RoutesKeys.routesImport ++= Seq(
-      "uk.gov.hmrc.transitmovementspushnotifications.models._"
+      "uk.gov.hmrc.transitmovementspushnotifications.models._",
+      "uk.gov.hmrc.transitmovementspushnotifications.models.Bindings._"
     )
   )
   .configs(IntegrationTest)

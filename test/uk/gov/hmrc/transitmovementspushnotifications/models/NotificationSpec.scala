@@ -40,7 +40,7 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
       val actual = Notification.messageReceivedNotificationFormat.reads(
         Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody)
       )
-      val expected = MessageReceivedNotification(messageUri, Some(messageBody))
+      val expected = MessageReceivedNotification(messageUri, None, Some(messageBody))
       actual mustBe JsSuccess(expected)
   }
 
@@ -53,19 +53,29 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
       actual mustBe JsSuccess(expected)
   }
 
-  "when Notification JsObject is deserialized for MESSAGE_RECEIVED, return a MessageReceivedNotification" in forAll(gen, gen) {
-    (messageUri, messageBody) =>
+  "when Notification JsObject is deserialized for MESSAGE_RECEIVED, return a MessageReceivedNotification" in forAll(gen, gen, Gen.option(gen)) {
+    (messageUri, messageBody, messageTypeMaybe) =>
       val actual = Notification.notificationReads.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody)
+        Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody) ++
+          messageTypeMaybe
+            .map(
+              x => Json.obj("messageType" -> x)
+            )
+            .getOrElse(Json.obj())
       )
-      val expected = MessageReceivedNotification(messageUri, Some(messageBody))
+      val expected = MessageReceivedNotification(messageUri, messageTypeMaybe.map(MessageType.apply), Some(messageBody))
       actual mustBe JsSuccess(expected)
   }
 
-  "when Notification JsObject is deserialized for SUBMISSION_NOTIFICATION, return a SubmissionNotification" in forAll(gen) {
-    messageUri =>
+  "when Notification JsObject is deserialized for SUBMISSION_NOTIFICATION, return a SubmissionNotification" in forAll(gen, Gen.option(gen)) {
+    (messageUri, messageTypeMaybe) =>
       val actual = Notification.notificationReads.reads(
-        Json.obj("messageUri" -> messageUri, "notificationType" -> "SUBMISSION_NOTIFICATION", "response" -> validJSONBody)
+        Json.obj("messageUri" -> messageUri, "notificationType" -> "SUBMISSION_NOTIFICATION", "response" -> validJSONBody) ++
+          messageTypeMaybe
+            .map(
+              x => Json.obj("messageType" -> x)
+            )
+            .getOrElse(Json.obj())
       )
       val expected = SubmissionNotification(messageUri, Some(validJSONBody))
       actual mustBe JsSuccess(expected)
@@ -81,7 +91,7 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
 
   "when MessageReceivedNotification is serialized, return an appropriate JsObject" in forAll(gen, gen) {
     (messageUri, messageBody) =>
-      val actual   = Notification.notificationWrites.writes(MessageReceivedNotification(messageUri, Some(messageBody)))
+      val actual   = Notification.notificationWrites.writes(MessageReceivedNotification(messageUri, None, Some(messageBody)))
       val expected = Json.obj("messageUri" -> messageUri, "notificationType" -> "MESSAGE_RECEIVED", "messageBody" -> messageBody)
       actual mustBe expected
   }

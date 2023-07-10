@@ -423,7 +423,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   }
 
-  "postNotification" - {
+  "postNotificationByContentType" - {
 
     val validXMLBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
 
@@ -444,7 +444,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       FakeRequest(
         method = POST,
         uri = routes.PushNotificationController
-          .postNotification(boxAssociation._id, messageId)
+          .postNotificationByContentType(boxAssociation._id, messageId)
           .url,
         headers = headers,
         body = body
@@ -452,8 +452,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "when called with a movement id, message id for which a box id is in the database with xml content type" - {
 
-      "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
-        (boxAssociation, messageId) =>
+      "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty), Gen.option(arbitrary[MessageType])) {
+        (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
@@ -464,13 +464,27 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               any[Long],
               MessageId(eqTo(messageId.value)),
               any[Source[ByteString, _]],
-              eqTo(NotificationType.MESSAGE_RECEIVED)
+              eqTo(NotificationType.MESSAGE_RECEIVED),
+              eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
 
           val result =
-            controller.postNotification(boxAssociation._id, messageId)(
-              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)), validXMLBody, boxAssociation, messageId)
+            controller.postNotificationByContentType(boxAssociation._id, messageId)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.XML
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validXMLBody,
+                boxAssociation,
+                messageId
+              )
             )
 
           status(result) mustBe ACCEPTED
@@ -484,9 +498,10 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
       "should return no content" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId].suchThat(_.value.nonEmpty)
+        arbitrary[MessageId].suchThat(_.value.nonEmpty),
+        Gen.option(arbitrary[MessageType])
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
@@ -497,20 +512,27 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               eqTo(0L),
               MessageId(eqTo(messageId.value)),
               any[Source[ByteString, _]],
-              eqTo(NotificationType.MESSAGE_RECEIVED)
+              eqTo(NotificationType.MESSAGE_RECEIVED),
+              eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
 
           lazy val request = FakeRequest(
             method = "POST",
             uri = routes.PushNotificationController
-              .postNotification(boxAssociation._id, messageId)
+              .postNotificationByContentType(boxAssociation._id, messageId)
               .url,
-            headers = FakeHeaders(),
+            headers = FakeHeaders(
+              messageTypeMaybe
+                .map(
+                  x => Seq("X-Message-Type" -> x.value)
+                )
+                .getOrElse(Seq())
+            ),
             body = AnyContentAsEmpty
           )
 
-          val result = controller.postNotification(boxAssociation._id, messageId)(request)
+          val result = controller.postNotificationByContentType(boxAssociation._id, messageId)(request)
 
           status(result) mustBe ACCEPTED
           verify(mockInternalAuthActionProvider, times(0)).apply(eqTo(associatePermission))(any())
@@ -520,8 +542,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "when called with a movement id, message id for which a box id is in the database with json content type" - {
 
-      "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty)) {
-        (boxAssociation, messageId) =>
+      "should return no content" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId].suchThat(_.value.nonEmpty), Gen.option(arbitrary[MessageType])) {
+        (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
@@ -532,13 +554,27 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               any[Long],
               MessageId(eqTo(messageId.value)),
               any[Source[ByteString, _]],
-              eqTo(NotificationType.SUBMISSION_NOTIFICATION)
+              eqTo(NotificationType.SUBMISSION_NOTIFICATION),
+              eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
           ).thenReturn(EitherT.rightT(()))
 
           val result =
-            controller.postNotification(boxAssociation._id, messageId)(
-              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)), validJSONBody, boxAssociation, messageId)
+            controller.postNotificationByContentType(boxAssociation._id, messageId)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.JSON
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validJSONBody,
+                boxAssociation,
+                messageId
+              )
             )
 
           status(result) mustBe ACCEPTED
@@ -550,8 +586,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "when called with a movement id for which there is no box id " - {
 
-      "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
-        (boxAssociation, messageId) =>
+      "should return box not found error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId], Gen.option(arbitrary[MessageType])) {
+        (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
@@ -563,7 +599,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 any[Long],
                 MessageId(eqTo(messageId.value)),
                 any[Source[ByteString, _]],
-                eqTo(NotificationType.MESSAGE_RECEIVED)
+                eqTo(NotificationType.MESSAGE_RECEIVED),
+                eqTo(messageTypeMaybe)
               )(
                 any[ExecutionContext],
                 any[HeaderCarrier],
@@ -572,8 +609,21 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           ).thenReturn(EitherT.rightT(()))
 
           val result =
-            controller.postNotification(boxAssociation._id, messageId)(
-              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)), validXMLBody, boxAssociation, messageId)
+            controller.postNotificationByContentType(boxAssociation._id, messageId)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.XML
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validXMLBody,
+                boxAssociation,
+                messageId
+              )
             )
 
           status(result) mustBe NOT_FOUND
@@ -585,8 +635,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     "when receiving an unexpected error" - {
 
-      "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId]) {
-        (boxAssociation, messageId) =>
+      "should return an internal server error" in forAll(arbitrary[BoxAssociation], arbitrary[MessageId], Gen.option(arbitrary[MessageType])) {
+        (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
             .thenReturn(EitherT.rightT(boxAssociation))
@@ -598,7 +648,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 any[Long],
                 MessageId(eqTo(messageId.value)),
                 any[Source[ByteString, _]],
-                eqTo(NotificationType.MESSAGE_RECEIVED)
+                eqTo(NotificationType.MESSAGE_RECEIVED),
+                eqTo(messageTypeMaybe)
               )(
                 any[ExecutionContext],
                 any[HeaderCarrier],
@@ -607,8 +658,202 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
 
           val result =
-            controller.postNotification(boxAssociation._id, messageId)(
-              fakePostNotification(FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.XML)), validXMLBody, boxAssociation, messageId)
+            controller.postNotificationByContentType(boxAssociation._id, messageId)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.XML
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validXMLBody,
+                boxAssociation,
+                messageId
+              )
+            )
+
+          status(result) mustBe INTERNAL_SERVER_ERROR
+
+          verify(mockInternalAuthActionProvider, times(0)).apply(eqTo(associatePermission))(any())
+          verify(mockInternalAuthActionProvider, times(1)).apply(eqTo(notificationPermission))(any())
+      }
+    }
+  }
+
+  "postNotification" - {
+
+    val validXMLBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
+
+    def fakePostNotification[A](
+      headers: FakeHeaders,
+      body: A,
+      boxAssociation: BoxAssociation,
+      messageId: MessageId,
+      notificationType: NotificationType
+    ): Request[A] =
+      FakeRequest(
+        method = POST,
+        uri = routes.PushNotificationController
+          .postNotification(boxAssociation._id, messageId, notificationType)
+          .url,
+        headers = headers,
+        body = body
+      )
+
+    "when called with a movement id, message id for which a box id is in the database with a given notification type" - {
+
+      "should return no content" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId].suchThat(_.value.nonEmpty),
+        Gen.option(arbitrary[MessageType]),
+        arbitrary[NotificationType]
+      ) {
+        (boxAssociation, messageId, messageTypeMaybe, notificationType) =>
+          resetInternalAuth()
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
+            .thenReturn(EitherT.rightT(boxAssociation))
+
+          when(
+            mockPushPullNotificationService.sendPushNotification(
+              eqTo(boxAssociation),
+              any[Long],
+              MessageId(eqTo(messageId.value)),
+              any[Source[ByteString, _]],
+              eqTo(notificationType),
+              eqTo(messageTypeMaybe)
+            )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
+          ).thenReturn(EitherT.rightT(()))
+
+          val result =
+            controller.postNotification(boxAssociation._id, messageId, notificationType)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.XML
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validXMLBody,
+                boxAssociation,
+                messageId,
+                notificationType
+              )
+            )
+
+          status(result) mustBe ACCEPTED
+
+          verify(mockInternalAuthActionProvider, times(0)).apply(eqTo(associatePermission))(any())
+          verify(mockInternalAuthActionProvider, times(1)).apply(eqTo(notificationPermission))(any())
+      }
+    }
+
+    "when called with a movement id for which there is no box id " - {
+
+      "should return not found" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId].suchThat(_.value.nonEmpty),
+        Gen.option(arbitrary[MessageType]),
+        arbitrary[NotificationType]
+      ) {
+        (boxAssociation, messageId, messageTypeMaybe, notificationType) =>
+          resetInternalAuth()
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
+            .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
+
+          when(
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Long],
+                MessageId(eqTo(messageId.value)),
+                any[Source[ByteString, _]],
+                eqTo(notificationType),
+                eqTo(messageTypeMaybe)
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
+          ).thenReturn(EitherT.rightT(()))
+
+          val result =
+            controller.postNotification(boxAssociation._id, messageId, notificationType)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.XML
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validXMLBody,
+                boxAssociation,
+                messageId,
+                notificationType
+              )
+            )
+
+          status(result) mustBe NOT_FOUND
+
+          verify(mockInternalAuthActionProvider, times(0)).apply(eqTo(associatePermission))(any())
+          verify(mockInternalAuthActionProvider, times(1)).apply(eqTo(notificationPermission))(any())
+      }
+    }
+
+    "when receiving an unexpected error" - {
+
+      "should return an internal server error" in forAll(
+        arbitrary[BoxAssociation],
+        arbitrary[MessageId].suchThat(_.value.nonEmpty),
+        Gen.option(arbitrary[MessageType]),
+        arbitrary[NotificationType]
+      ) {
+        (boxAssociation, messageId, messageTypeMaybe, notificationType) =>
+          resetInternalAuth()
+          when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
+            .thenReturn(EitherT.rightT(boxAssociation))
+
+          when(
+            mockPushPullNotificationService
+              .sendPushNotification(
+                eqTo(boxAssociation),
+                any[Long],
+                MessageId(eqTo(messageId.value)),
+                any[Source[ByteString, _]],
+                eqTo(notificationType),
+                eqTo(messageTypeMaybe)
+              )(
+                any[ExecutionContext],
+                any[HeaderCarrier],
+                any[Materializer]
+              )
+          ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
+
+          val result =
+            controller.postNotification(boxAssociation._id, messageId, notificationType)(
+              fakePostNotification(
+                FakeHeaders(
+                  Seq(
+                    HeaderNames.CONTENT_TYPE -> MimeTypes.XML
+                  ) ++ messageTypeMaybe
+                    .map(
+                      x => Seq("X-Message-Type" -> x.value)
+                    )
+                    .getOrElse(Seq())
+                ),
+                validXMLBody,
+                boxAssociation,
+                messageId,
+                notificationType
+              )
             )
 
           status(result) mustBe INTERNAL_SERVER_ERROR

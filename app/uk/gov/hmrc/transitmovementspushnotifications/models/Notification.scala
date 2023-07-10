@@ -23,7 +23,7 @@ sealed trait Notification extends Product with Serializable {
   val notificationType: NotificationType
 }
 
-case class MessageReceivedNotification(messageUri: String, messageBody: Option[String]) extends Notification {
+case class MessageReceivedNotification(messageUri: String, messageType: Option[MessageType], messageBody: Option[String]) extends Notification {
   override val notificationType: NotificationType = NotificationType.MESSAGE_RECEIVED
 }
 
@@ -45,9 +45,10 @@ object Notification {
   }
 
   implicit val notificationWrites: OWrites[Notification] = OWrites[Notification] {
-    case x: MessageReceivedNotification =>
-      Json.obj("messageUri" -> x.messageUri) ++ Json.obj("notificationType" -> x.notificationType) ++ Json.obj("messageBody" -> x.messageBody)
-    case x: SubmissionNotification =>
-      Json.obj("messageUri" -> x.messageUri) ++ Json.obj("notificationType" -> x.notificationType) ++ Json.obj("response" -> x.response)
+    notification =>
+      Json.obj("notificationType" -> notification.notificationType) ++ (notification match {
+        case x: MessageReceivedNotification => messageReceivedNotificationFormat.writes(x)
+        case x: SubmissionNotification      => submissionNotificationFormat.writes(x)
+      })
   }
 }

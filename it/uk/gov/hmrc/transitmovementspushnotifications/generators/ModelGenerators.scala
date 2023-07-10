@@ -39,13 +39,23 @@ trait ModelGenerators extends BaseGenerators {
         )
     }
 
-  lazy val arbitraryMessageId: Arbitrary[MessageId] =
+  implicit lazy val arbitraryMessageId: Arbitrary[MessageId] =
     Arbitrary {
       Gen
         .listOfN(16, Gen.hexChar)
         .map(
           id => MessageId(id.mkString)
         )
+    }
+
+  implicit lazy val arbitraryMessageType: Arbitrary[MessageType] =
+    Arbitrary {
+      Gen.stringOfN(5, Gen.alphaNumChar).map(MessageType.apply)
+    }
+
+  implicit lazy val arbitraryOptionalMessageType: Arbitrary[Option[MessageType]] =
+    Arbitrary {
+      Gen.option(arbitrary[MessageType])
     }
 
   implicit lazy val arbitraryBoxId: Arbitrary[BoxId] = Arbitrary {

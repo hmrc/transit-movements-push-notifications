@@ -161,9 +161,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       "should return a valid response" in forAll(
         arbitrary[BoxAssociation],
         arbitrary[MessageId],
-        arbitrary[NotificationType]
+        arbitrary[NotificationType],
+        Gen.option(arbitrary[MessageType])
       ) {
-        (boxAssociation, messageId, notificationType) =>
+        (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           val (notification, source) = {
@@ -171,6 +172,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageTypeMaybe,
                   Some(sampleString)
                 ),
                 Source.single(ByteString(sampleString, StandardCharsets.UTF_8))
@@ -199,7 +201,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             contentLength = maxPayloadSize - 1,
             messageId = messageId,
             body = source,
-            notificationType
+            notificationType,
+            messageTypeMaybe
           )
 
           whenReady(result.value) {
@@ -212,9 +215,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       "should return a valid response" in forAll(
         arbitrary[BoxAssociation],
         arbitrary[MessageId],
-        arbitrary[NotificationType]
+        arbitrary[NotificationType],
+        Gen.option(arbitrary[MessageType])
       ) {
-        (boxAssociation, messageId, notificationType) =>
+        (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           val (notification, source) = {
@@ -222,6 +226,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageTypeMaybe,
                   None
                 ),
                 Source.single(ByteString(sampleString, StandardCharsets.UTF_8))
@@ -250,7 +255,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             contentLength = maxPayloadSize + 1,
             messageId = messageId,
             body = source,
-            notificationType
+            notificationType,
+            messageTypeMaybe
           )
 
           whenReady(result.value) {
@@ -262,12 +268,14 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     "when given a valid boxId without payload" - {
       "should return a valid response" in forAll(
         arbitrary[BoxAssociation],
-        arbitrary[MessageId]
+        arbitrary[MessageId],
+        Gen.option(arbitrary[MessageType])
       ) {
-        (boxAssociation, messageId) =>
+        (boxAssociation, messageId, messageTypeMaybe) =>
           val expectedMessageNotification =
             MessageReceivedNotification(
               s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+              messageTypeMaybe,
               None
             )
 
@@ -282,7 +290,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             contentLength = 0L,
             messageId = messageId,
             body = Source.single(ByteString("", StandardCharsets.UTF_8)),
-            NotificationType.MESSAGE_RECEIVED
+            NotificationType.MESSAGE_RECEIVED,
+            messageTypeMaybe
           )
 
           whenReady(result.value) {
@@ -295,14 +304,16 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       "should return a not found response" in forAll(
         arbitrary[BoxAssociation],
         arbitrary[MessageId],
-        arbitrary[NotificationType]
+        arbitrary[NotificationType],
+        Gen.option(arbitrary[MessageType])
       ) {
-        (boxAssociation, messageId, notificationType) =>
+        (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
           val (notification, source) = {
             if (notificationType == NotificationType.MESSAGE_RECEIVED) {
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageTypeMaybe,
                   Some(sampleString)
                 ),
                 Source.single(ByteString(sampleString, StandardCharsets.UTF_8))
@@ -330,7 +341,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             contentLength = maxPayloadSize - 1,
             messageId = messageId,
             body = source,
-            notificationType
+            notificationType,
+            messageTypeMaybe
           )
 
           whenReady(result.value) {
@@ -343,14 +355,16 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       "should return a response indicating an unexpected error occurred" in forAll(
         arbitrary[BoxAssociation],
         arbitrary[MessageId],
-        arbitrary[NotificationType]
+        arbitrary[NotificationType],
+        Gen.option(arbitrary[MessageType])
       ) {
-        (boxAssociation, messageId, notificationType) =>
+        (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
           val (notification, source) = {
             if (notificationType == NotificationType.MESSAGE_RECEIVED) {
               (
                 MessageReceivedNotification(
                   s"/customs/transits/movements/${boxAssociation.movementType.urlFragment}/${boxAssociation._id.value}/messages/${messageId.value}",
+                  messageTypeMaybe,
                   Some(sampleString)
                 ),
                 Source.single(ByteString(sampleString, StandardCharsets.UTF_8))
@@ -378,7 +392,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
             contentLength = maxPayloadSize - 1,
             messageId = messageId,
             body = source,
-            notificationType
+            notificationType,
+            messageTypeMaybe
           )
 
           whenReady(result.value) {

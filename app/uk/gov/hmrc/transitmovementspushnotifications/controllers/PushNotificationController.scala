@@ -38,6 +38,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertE
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.stream.StreamingParsers
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
@@ -84,7 +85,7 @@ class PushNotificationController @Inject() (
     IAAction("WRITE")
   )
 
-  def postNotification(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
+  def postNotificationByContentType(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
     contentTypeRoute {
       case Some(MimeTypes.XML) =>
         postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
@@ -94,14 +95,19 @@ class PushNotificationController @Inject() (
         postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
     }
 
-  private def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
+  def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
     internalAuth(notificationPermission).streamWithSize {
-
       implicit request => size =>
         (for {
           boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
+          messageType = hc
+            .headers(Seq("X-Message-Type"))
+            .headOption
+            .map(
+              x => MessageType(x._2)
+            )
           result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, size, messageId, request.body, notificationType)
+            .sendPushNotification(boxAssociation, size, messageId, request.body, notificationType, messageType)
             .asPresentation
         } yield result).fold[Result](
           baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
