@@ -23,24 +23,30 @@ import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 
-sealed trait NotificationType
+sealed trait NotificationType {
+  def pathRepresentation: String
+}
 
 object NotificationType {
-  final case object SUBMISSION_NOTIFICATION extends NotificationType
 
-  final case object MESSAGE_RECEIVED extends NotificationType
-
-  val values = Seq(SUBMISSION_NOTIFICATION, MESSAGE_RECEIVED)
-
-  implicit val notificationTypeWrites = new Writes[NotificationType] {
-
-    def writes(notificationType: NotificationType) = Json.toJson(notificationType.toString())
+  final case object SUBMISSION_NOTIFICATION extends NotificationType {
+    override def pathRepresentation: String = "submissionNotification"
   }
+
+  final case object MESSAGE_RECEIVED extends NotificationType {
+    override def pathRepresentation: String = "messageReceived"
+  }
+
+  val values: Seq[NotificationType] = Seq(SUBMISSION_NOTIFICATION, MESSAGE_RECEIVED)
+
+  implicit val notificationTypeWrites: Writes[NotificationType] = (notificationType: NotificationType) => Json.toJson(notificationType.toString)
 
   implicit val notificationTypeReads: Reads[NotificationType] = Reads {
     case JsString("SUBMISSION_NOTIFICATION") => JsSuccess(SUBMISSION_NOTIFICATION)
     case JsString("MESSAGE_RECEIVED")        => JsSuccess(MESSAGE_RECEIVED)
     case _                                   => JsError()
   }
+
+  def findByPathRepresentation(value: String): Option[NotificationType] = values.find(_.pathRepresentation.equalsIgnoreCase(value))
 
 }

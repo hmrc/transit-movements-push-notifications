@@ -51,7 +51,8 @@ trait PushPullNotificationService {
     contentLength: Long,
     messageId: MessageId,
     body: Source[ByteString, _],
-    notificationType: NotificationType
+    notificationType: NotificationType,
+    messageType: Option[MessageType]
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -79,7 +80,8 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     contentLength: Long,
     messageId: MessageId,
     body: Source[ByteString, _],
-    notificationType: NotificationType
+    notificationType: NotificationType,
+    messageType: Option[MessageType]
   )(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier,
@@ -88,29 +90,23 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
 
     lazy val uri = buildUriAsString(boxAssociation._id, messageId, boxAssociation.movementType)
 
-    def selectNotificationType(bodyOpt: Option[String]) =
-      if (NotificationType.SUBMISSION_NOTIFICATION == notificationType)
-        postSubmissionNotification(boxAssociation, uri, bodyOpt)
-      else {
-        postMessageReceivedNotification(boxAssociation, uri, bodyOpt)
-      }
+    def createNotification(body: Option[String]) = notificationType match {
+      case NotificationType.MESSAGE_RECEIVED => MessageReceivedNotification(uri, messageId, boxAssociation._id, boxAssociation.movementType, messageType, body)
+      case NotificationType.SUBMISSION_NOTIFICATION =>
+        SubmissionNotification(uri, messageId, boxAssociation._id, boxAssociation.movementType, body.map(Json.parse))
+    }
 
     EitherT(
       {
-        contentLength match {
-          case 0L => postMessageReceivedNotification(boxAssociation, uri, None)
-          case x if contentLength <= appConfig.maxPushPullPayloadSize =>
-            body
-              .reduce(_ ++ _)
-              .map(_.utf8String)
-              .runWith(Sink.headOption)
-              .flatMap {
-                bodyOpt =>
-                  selectNotificationType(bodyOpt)
-              }
-          case contentLength if contentLength > appConfig.maxPushPullPayloadSize => selectNotificationType(None)
-        }
+        if (contentLength > 0L && contentLength <= appConfig.maxPushPullPayloadSize) {
+          body
+            .reduce(_ ++ _)
+            .map(_.utf8String)
+            .runWith(Sink.headOption)
+        } else Future.successful(None)
       }
+        .map(createNotification)
+        .flatMap(pushPullNotificationConnector.postNotification(boxAssociation.boxId, _))
         .map {
           case Right(_) => Right(())
           case Left(error) =>
@@ -126,24 +122,6 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         }
     )
   }
-
-  private def postSubmissionNotification(boxAssociation: BoxAssociation, uri: String, body: Option[String])(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier
-  ): Future[Either[UpstreamErrorResponse, Unit]] =
-    body match {
-      case Some(body) => pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, Some(Json.parse(body))))
-      case None       => pushPullNotificationConnector.postNotification(boxAssociation.boxId, SubmissionNotification(uri, None))
-    }
-
-  private def postMessageReceivedNotification(boxAssociation: BoxAssociation, uri: String, body: Option[String])(implicit
-    ec: ExecutionContext,
-    hc: HeaderCarrier
-  ): Future[Either[UpstreamErrorResponse, Unit]] =
-    body match {
-      case Some(body) => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, Some(body)))
-      case None       => pushPullNotificationConnector.postNotification(boxAssociation.boxId, MessageReceivedNotification(uri, None))
-    }
 
   private def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     EitherT(

@@ -22,6 +22,7 @@ import org.scalacheck.Gen
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
@@ -51,6 +52,11 @@ trait ModelGenerators extends BaseGenerators {
         .map(
           id => MessageId(id.mkString)
         )
+    }
+
+  implicit lazy val arbitraryMessageType: Arbitrary[MessageType] =
+    Arbitrary {
+      Gen.stringOfN(5, Gen.alphaNumChar).map(MessageType.apply)
     }
 
   implicit lazy val arbitraryBoxId: Arbitrary[BoxId] = Arbitrary {
