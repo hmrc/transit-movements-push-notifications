@@ -131,7 +131,7 @@ class PushNotificationController @Inject() (
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
         boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
-        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType)
+        movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType, boxAssociation.enrollmentEORINumber)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
@@ -143,7 +143,10 @@ class PushNotificationController @Inject() (
     body
       .validate[BoxAssociationRequest] match {
       case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
-      case _                            => EitherT.leftT[Future, BoxAssociationRequest](PresentationError.badRequestError("Expected clientId and movementType to be present in the body"))
+      case _ =>
+        EitherT.leftT[Future, BoxAssociationRequest](
+          PresentationError.badRequestError("Expected clientId, movementType and enrollmentEORINumber to be present in the body")
+        )
     }
 
 }

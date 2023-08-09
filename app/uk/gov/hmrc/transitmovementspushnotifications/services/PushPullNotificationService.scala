@@ -67,12 +67,19 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     with ConvertError
     with Logging {
 
+  private object BoxAssociationRequestBoxAndClient {
+
+    def unapply(boxAssociationRequest: BoxAssociationRequest): Option[(String, Option[BoxId])] = Some(
+      (boxAssociationRequest.clientId, boxAssociationRequest.boxId)
+    )
+  }
+
   override def getBoxId(
     boxAssociationRequest: BoxAssociationRequest
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     boxAssociationRequest match {
-      case BoxAssociationRequest(clientId, _, Some(boxId)) => checkBoxIdExists(clientId, boxId)
-      case BoxAssociationRequest(clientId, _, None)        => getDefaultBoxId(clientId)
+      case BoxAssociationRequestBoxAndClient(clientId, Some(boxId)) => checkBoxIdExists(clientId, boxId)
+      case BoxAssociationRequestBoxAndClient(clientId, None)        => getDefaultBoxId(clientId)
     }
 
   override def sendPushNotification(

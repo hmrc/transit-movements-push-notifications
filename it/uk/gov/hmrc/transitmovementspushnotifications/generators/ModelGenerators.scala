@@ -73,13 +73,22 @@ trait ModelGenerators extends BaseGenerators {
       } yield OffsetDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneOffset.UTC)
     }
 
+  implicit lazy val arbitraryEORINumber: Arbitrary[EORINumber] =
+    Arbitrary {
+      for {
+        countryCode <- Gen.oneOf(Seq("GB", "XI"))
+        digits      <- Gen.stringOfN(15, Gen.numChar)
+      } yield EORINumber(countryCode ++ digits)
+    }
+
   implicit lazy val arbitraryBoxAssociationRequest: Arbitrary[BoxAssociationRequest] =
     Arbitrary {
       for {
         clientId     <- arbitrary[String]
         movementType <- arbitrary[MovementType]
         boxId        <- arbitrary[Option[BoxId]]
-      } yield BoxAssociationRequest(clientId, movementType, boxId)
+        eori         <- arbitrary[EORINumber]
+      } yield BoxAssociationRequest(clientId, movementType, boxId, eori)
     }
 
   implicit lazy val arbitraryBoxResponse: Arbitrary[BoxResponse] =
@@ -96,7 +105,8 @@ trait ModelGenerators extends BaseGenerators {
         movementId   <- arbitrary[MovementId]
         movementType <- arbitrary[MovementType]
         updated      <- arbitrary[OffsetDateTime]
-      } yield BoxAssociation(movementId, boxId, movementType, updated)
+        eori         <- arbitrary[EORINumber]
+      } yield BoxAssociation(movementId, boxId, movementType, updated, Some(eori))
     }
 
   implicit lazy val arbitraryNotificationType: Arbitrary[NotificationType] =

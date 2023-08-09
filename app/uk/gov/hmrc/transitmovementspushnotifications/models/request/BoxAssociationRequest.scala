@@ -17,12 +17,14 @@
 package uk.gov.hmrc.transitmovementspushnotifications.models.request
 
 import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
 
-case class BoxAssociationRequest(clientId: String, movementType: MovementType, boxId: Option[BoxId])
+case class BoxAssociationRequest(clientId: String, movementType: MovementType, boxId: Option[BoxId], enrollmentEORINumber: EORINumber)
 
 object BoxAssociationRequest extends CommonFormats {
-  implicit val boxFormat = Json.format[BoxAssociationRequest]
+  implicit val boxAssociationRequestFormat: OFormat[BoxAssociationRequest] = Json.format[BoxAssociationRequest]
 }

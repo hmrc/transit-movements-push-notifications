@@ -35,8 +35,13 @@ import play.api.http.HeaderNames
 import play.api.http.MimeTypes
 import play.api.libs.Files.SingletonTemporaryFileCreator
 import play.api.libs.Files.TemporaryFileCreator
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.functional.syntax.unlift
+import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import play.api.libs.json.OWrites
+import play.api.libs.json.__
 import play.api.mvc._
 import play.api.test.Helpers.contentAsJson
 import play.api.test.Helpers.contentAsString
@@ -67,6 +72,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.BoxAssociationFact
 import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificationService
 
 import java.nio.charset.StandardCharsets
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -133,30 +139,37 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   "createBoxAssociation" - {
 
-    val validBody: Gen[JsValue] =
+    case class JsonBody(clientId: String, movementType: String, enrollmentEORINumber: String)
+
+    implicit val writes: OWrites[JsonBody] = (
+      (__ \ "clientId").write[String] and
+        (__ \ "movementType").write[String] and
+        (__ \ "enrollmentEORINumber").write[String]
+    )(unlift(JsonBody.unapply))
+
+    val validBody: Gen[JsonBody] =
       for {
         clientId     <- Gen.alphaNumStr
         movementType <- Gen.oneOf(MovementType.values)
-      } yield Json.obj(
-        "clientId"     -> clientId,
-        "movementType" -> movementType.movementType
-      )
+        eori         <- arbitrary[EORINumber]
+      } yield JsonBody(clientId, movementType.movementType, eori.value)
 
-    val invalidMovementTypeBody: Gen[JsValue] =
+    val invalidMovementTypeBody: Gen[JsonBody] =
       for {
         clientId     <- Gen.alphaNumStr
         movementType <- Gen.hexStr
-      } yield Json.obj(
-        "clientId"     -> clientId,
-        "movementType" -> movementType
-      )
+        eori         <- arbitrary[EORINumber]
+      } yield JsonBody(clientId, movementType, eori.value)
 
-    val invalidBodyWithoutClientId: Gen[JsValue] =
-      for {
-        movementType <- Gen.oneOf(MovementType.values)
-      } yield Json.obj(
-        "movementType" -> movementType.movementType
-      )
+    val listOfFields = Gen.atLeastOne(
+      "clientId",
+      "movementType",
+      "enrollmentEORINumber"
+    )
+
+    def findMovementType(t: String): Option[MovementType] = MovementType.values.find(
+      movementType => movementType.movementType == t
+    )
 
     "must return Created if successfully inserts box association" in forAll(
       arbitrary[BoxAssociation],
@@ -167,13 +180,20 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
-        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
+        when(
+          mockMovementBoxAssociationFactory.create(
+            BoxId(eqTo(boxAssociation.boxId.value)),
+            MovementId(eqTo(boxAssociation._id.value)),
+            eqTo(findMovementType(body.movementType).get),
+            EORINumber(eqTo(body.enrollmentEORINumber))
+          )
+        )
           .thenReturn(boxAssociation)
 
         when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
           .thenReturn(EitherT.rightT(boxAssociation))
 
-        val request = fakeRequest(boxAssociation._id, POST, body)
+        val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
         val expectedJson = Json.obj("boxId" -> boxAssociation.boxId.value)
 
@@ -196,13 +216,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
-        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
-          .thenReturn(boxAssociation)
-
-        when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.rightT(boxAssociation))
-
-        val request = fakeRequest(boxAssociation._id, POST, body)
+        val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
@@ -210,27 +224,31 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe Json.obj(
           "code"    -> "BAD_REQUEST",
-          "message" -> "Expected clientId and movementType to be present in the body"
+          "message" -> "Expected clientId, movementType and enrollmentEORINumber to be present in the body"
         )
 
         verify(mockInternalAuthActionProvider, times(1)).apply(eqTo(associatePermission))(any())
         verify(mockInternalAuthActionProvider, times(0)).apply(eqTo(notificationPermission))(any())
     }
 
-    "must return BAD_REQUEST when clientId or movementType or both are missing in body" in forAll(
+    "must return BAD_REQUEST when clientId, movementType, enrollmentEORINumber or any combination thereof are missing in body" in forAll(
       arbitrary[BoxAssociation],
-      invalidBodyWithoutClientId
+      validBody,
+      listOfFields
     ) {
-      (boxAssociation, body) =>
+      (boxAssociation, validBody, fieldsToExclude) =>
+        @tailrec
+        def excludeFields(jsonBody: JsObject, fields: Iterable[String]): JsObject =
+          (fields: @unchecked) match {
+            case head :: tail => excludeFields(jsonBody - head, tail)
+            case Nil          => jsonBody
+          }
+
+        val body = excludeFields(Json.toJsObject(validBody), fieldsToExclude)
+
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
-
-        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
-          .thenReturn(boxAssociation)
-
-        when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.rightT(boxAssociation))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
 
@@ -240,7 +258,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe Json.obj(
           "code"    -> "BAD_REQUEST",
-          "message" -> "Expected clientId and movementType to be present in the body"
+          "message" -> "Expected clientId, movementType and enrollmentEORINumber to be present in the body"
         )
 
         verify(mockInternalAuthActionProvider, times(1)).apply(eqTo(associatePermission))(any())
@@ -256,7 +274,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT(PushPullNotificationError.BoxNotFound(BoxId("test"))))
 
-        val request = fakeRequest(boxAssociation._id, POST, body)
+        val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
@@ -276,7 +294,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT(PushPullNotificationError.DefaultBoxNotFound))
 
-        val request = fakeRequest(boxAssociation._id, POST, body)
+        val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
@@ -300,7 +318,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         status(result) mustBe BAD_REQUEST
         contentAsJson(result) mustBe Json.obj(
           "code"    -> "BAD_REQUEST",
-          "message" -> "Expected clientId and movementType to be present in the body"
+          "message" -> "Expected clientId, movementType and enrollmentEORINumber to be present in the body"
         )
 
         verify(mockInternalAuthActionProvider, times(1)).apply(eqTo(associatePermission))(any())
@@ -316,7 +334,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
 
-        val request = fakeRequest(boxAssociation._id, POST, body)
+        val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
@@ -340,13 +358,20 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT(boxAssociation.boxId))
 
-        when(mockMovementBoxAssociationFactory.create(any[String].asInstanceOf[BoxId], any[String].asInstanceOf[MovementId], any[MovementType]))
+        when(
+          mockMovementBoxAssociationFactory.create(
+            BoxId(eqTo(boxAssociation.boxId.value)),
+            MovementId(eqTo(boxAssociation._id.value)),
+            eqTo(findMovementType(body.movementType).get),
+            EORINumber(eqTo(body.enrollmentEORINumber))
+          )
+        )
           .thenReturn(boxAssociation)
 
-        when(mockMovementBoxAssociationRepository.insert(any[BoxAssociation]))
+        when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
           .thenReturn(EitherT.leftT(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id}")))
 
-        val request = fakeRequest(boxAssociation._id, POST, body)
+        val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
         val result =
           controller.createBoxAssociation(boxAssociation._id)(request)
