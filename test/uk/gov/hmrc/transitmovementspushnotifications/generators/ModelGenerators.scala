@@ -21,6 +21,7 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
@@ -43,6 +44,14 @@ trait ModelGenerators extends BaseGenerators {
         .map(
           id => MovementId(id.mkString)
         )
+    }
+
+  implicit lazy val arbitraryEORINumber: Arbitrary[EORINumber] =
+    Arbitrary {
+      for {
+        countryCode <- Gen.oneOf(Seq("GB", "XI"))
+        digits      <- Gen.stringOfN(15, Gen.numChar)
+      } yield EORINumber(countryCode ++ digits)
     }
 
   implicit lazy val arbitraryMessageId: Arbitrary[MessageId] =
@@ -80,7 +89,8 @@ trait ModelGenerators extends BaseGenerators {
         clientId     <- arbitrary[String]
         movementType <- arbitrary[MovementType]
         boxId        <- arbitrary[Option[BoxId]]
-      } yield BoxAssociationRequest(clientId, movementType, boxId)
+        eori         <- arbitrary[EORINumber]
+      } yield BoxAssociationRequest(clientId, movementType, boxId, eori)
     }
 
   implicit lazy val arbitraryBoxResponse: Arbitrary[BoxResponse] =
@@ -100,7 +110,8 @@ trait ModelGenerators extends BaseGenerators {
         boxId        <- arbitrary[BoxId]
         movementType <- arbitrary[MovementType]
         updated      <- arbitrary[OffsetDateTime]
-      } yield BoxAssociation(movementId, boxId, movementType, updated)
+        eori         <- arbitrary[EORINumber]
+      } yield BoxAssociation(movementId, boxId, movementType, updated, Some(eori))
     }
 
 }

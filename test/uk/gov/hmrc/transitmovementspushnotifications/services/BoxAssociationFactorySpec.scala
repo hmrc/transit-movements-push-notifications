@@ -16,8 +16,14 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services
 
+import org.scalacheck.Arbitrary.arbitrary
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
 
 import java.security.SecureRandom
@@ -25,34 +31,30 @@ import java.time.Clock
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-class BoxAssociationFactorySpec extends SpecBase with ModelGenerators {
+class BoxAssociationFactorySpec extends SpecBase with ModelGenerators with ScalaCheckDrivenPropertyChecks {
 
   val instant: OffsetDateTime = OffsetDateTime.of(2022, 5, 27, 11, 0, 0, 0, ZoneOffset.UTC)
   val clock: Clock            = Clock.fixed(instant.toInstant, ZoneOffset.UTC)
   val random                  = new SecureRandom
 
-  "create box association for arrival" - {
+  "create box association" - {
     val sut = new BoxAssociationFactoryImpl(clock)
 
-    "will create a box association with _id equal to the movementId supplied for arrival" in {
-      val boxId      = arbitraryBoxId.arbitrary.sample.get
-      val movementId = arbitraryMovementId.arbitrary.sample.get
-
-      val boxAssociation = sut.create(boxId, movementId, MovementType.Arrival)
-      boxAssociation._id.value mustBe movementId.value
+    "will create a box association that matches the inputs" in forAll(
+      arbitrary[BoxId],
+      arbitrary[MovementId],
+      arbitrary[MovementType],
+      arbitrary[EORINumber]
+    ) {
+      (boxId, movementId, movementType, enrollmentEORINumber) =>
+        val boxAssociation = sut.create(boxId, movementId, movementType, enrollmentEORINumber)
+        boxAssociation mustBe BoxAssociation(
+          movementId,
+          boxId,
+          movementType,
+          instant,
+          Some(enrollmentEORINumber)
+        )
     }
   }
-
-  "create box association for departure" - {
-    val sut = new BoxAssociationFactoryImpl(clock)
-
-    "will create a box association with _id equal to the movementId supplied for departure" in {
-      val boxId          = arbitraryBoxId.arbitrary.sample.get
-      val movementId     = arbitraryMovementId.arbitrary.sample.get
-      val boxAssociation = sut.create(boxId, movementId, MovementType.Departure)
-
-      boxAssociation._id.value mustBe movementId.value
-    }
-  }
-
 }
