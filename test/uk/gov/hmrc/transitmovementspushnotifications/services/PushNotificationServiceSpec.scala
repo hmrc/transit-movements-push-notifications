@@ -175,6 +175,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   messageTypeMaybe,
                   Some(sampleString)
                 ),
@@ -188,6 +189,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   Some(validJSONBody)
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
@@ -235,6 +237,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   messageTypeMaybe,
                   None
                 ),
@@ -248,6 +251,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   None
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
@@ -290,6 +294,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               messageId,
               boxAssociation._id,
               boxAssociation.movementType,
+              boxAssociation.enrollmentEORINumber,
               messageTypeMaybe,
               None
             )
@@ -331,6 +336,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   messageTypeMaybe,
                   Some(sampleString)
                 ),
@@ -344,6 +350,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   Some(validJSONBody)
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
@@ -388,6 +395,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   messageTypeMaybe,
                   Some(sampleString)
                 ),
@@ -401,6 +409,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
                   messageId,
                   boxAssociation._id,
                   boxAssociation.movementType,
+                  boxAssociation.enrollmentEORINumber,
                   Some(validJSONBody)
                 ),
                 Source.single(ByteString(Json.stringify(validJSONBody), StandardCharsets.UTF_8))
