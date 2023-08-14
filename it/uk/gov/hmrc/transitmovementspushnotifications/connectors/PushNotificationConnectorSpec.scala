@@ -46,6 +46,7 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageReceivedNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
@@ -249,11 +250,14 @@ class PushNotificationConnectorSpec
           arbitrary[MovementType]
         ) {
           (boxId, messageId, movementId, body, messageType, movementType) =>
+            // forAll only suppoorts six entries, so we need to do other arbitraries like this
+            val enrollmentEori = arbitrary[EORINumber].sample.get
             val messageNotificationWithBody = MessageReceivedNotification(
               messageUri = s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
               movementId = movementId,
               messageId = messageId,
               movementType = movementType,
+              enrollmentEORINumber = Some(enrollmentEori),
               messageBody = Some(body),
               messageType = Some(messageType)
             )
@@ -268,7 +272,8 @@ class PushNotificationConnectorSpec
                     |   "${movementType.toString.toLowerCase}Id": "${movementId.value}",
                     |   "messageId": "${messageId.value}",
                     |   "messageBody": "$body",
-                    |   "messageType": "${messageType.value}"
+                    |   "messageType": "${messageType.value}",
+                    |   "enrollmentEORINumber": "${enrollmentEori.value}"
                     |}
                     |""".stripMargin
                   )
@@ -295,14 +300,16 @@ class PushNotificationConnectorSpec
           arbitrary[MessageId],
           arbitrary[MovementId],
           arbitrary[MessageType],
-          arbitrary[MovementType]
+          arbitrary[MovementType],
+          arbitrary[EORINumber]
         ) {
-          (boxId, messageId, movementId, messageType, movementType) =>
+          (boxId, messageId, movementId, messageType, movementType, eori) =>
             val messageNotificationWithoutBody = MessageReceivedNotification(
               messageUri = s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
               movementId = movementId,
               messageId = messageId,
               movementType = movementType,
+              enrollmentEORINumber = Some(eori),
               messageBody = None,
               messageType = Some(messageType)
             )
@@ -316,7 +323,8 @@ class PushNotificationConnectorSpec
                      |   "${movementType.toString.toLowerCase}Id": "${movementId.value}",
                      |   "messageId": "${messageId.value}",
                      |   "notificationType": "MESSAGE_RECEIVED",
-                     |   "messageType": "${messageType.value}"
+                     |   "messageType": "${messageType.value}",
+                     |   "enrollmentEORINumber": "${eori.value}"
                      |}
                      |""".stripMargin
                   )
@@ -344,14 +352,16 @@ class PushNotificationConnectorSpec
             arbitrary[MessageId],
             arbitrary[MovementId],
             arbitrary[MessageType],
-            arbitrary[MovementType]
+            arbitrary[MovementType],
+            arbitrary[EORINumber]
           ) {
-            (boxId, messageId, movementId, messageType, movementType) =>
+            (boxId, messageId, movementId, messageType, movementType, eori) =>
               val messageNotificationWithoutBody = MessageReceivedNotification(
                 messageUri = s"/customs/transits/movements/departures/$movementId/messages/$messageId",
                 movementId = movementId,
                 messageId = messageId,
                 movementType = movementType,
+                enrollmentEORINumber = Some(eori),
                 messageBody = None,
                 messageType = Some(messageType)
               )

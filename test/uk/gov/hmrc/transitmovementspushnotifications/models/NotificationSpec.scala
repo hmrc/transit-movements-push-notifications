@@ -21,6 +21,7 @@ import org.scalacheck.Gen
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
+import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 
@@ -36,8 +37,18 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
     arbitrary[MovementType]
   ) {
     (messageUri, messageBody, movementId, messageId, messageType, movementType) =>
+      // We can only have six entries for forAll, so we have to manually add our seventh here
+      val enrollmentEORINumberMaybe = Gen.option(arbitrary[EORINumber]).sample.get
       val actual = Notification.notificationWrites.writes(
-        MessageReceivedNotification(messageUri, messageId, movementId, movementType, Some(MessageType(messageType)), Some(messageBody))
+        MessageReceivedNotification(
+          messageUri,
+          messageId,
+          movementId,
+          movementType,
+          enrollmentEORINumberMaybe,
+          Some(MessageType(messageType)),
+          Some(messageBody)
+        )
       )
       val expected = Json.obj(
         "messageUri"                              -> messageUri,
@@ -46,7 +57,11 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
         s"${movementType.toString.toLowerCase}Id" -> movementId.value,
         "messageId"                               -> messageId.value,
         "messageBody"                             -> messageBody
-      )
+      ) ++ enrollmentEORINumberMaybe
+        .map(
+          x => Json.obj("enrollmentEORINumber" -> x.value)
+        )
+        .getOrElse(JsObject.empty)
       actual mustBe expected
   }
 
@@ -55,18 +70,25 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
     gen,
     arbitrary[MovementId],
     arbitrary[MessageId],
-    arbitrary[MovementType]
+    arbitrary[MovementType],
+    Gen.option(arbitrary[EORINumber])
   ) {
-    (messageUri, messageBody, movementId, messageId, movementType) =>
+    (messageUri, messageBody, movementId, messageId, movementType, enrollmentEORINumberMaybe) =>
       val actual =
-        Notification.notificationWrites.writes(SubmissionNotification(messageUri, messageId, movementId, movementType, Some(Json.obj("test" -> messageBody))))
+        Notification.notificationWrites.writes(
+          SubmissionNotification(messageUri, messageId, movementId, movementType, enrollmentEORINumberMaybe, Some(Json.obj("test" -> messageBody)))
+        )
       val expected = Json.obj(
         "messageUri"                              -> messageUri,
         "notificationType"                        -> "SUBMISSION_NOTIFICATION",
         s"${movementType.toString.toLowerCase}Id" -> movementId.value,
         "messageId"                               -> messageId.value,
         "response"                                -> Json.obj("test" -> messageBody)
-      )
+      ) ++ enrollmentEORINumberMaybe
+        .map(
+          x => Json.obj("enrollmentEORINumber" -> x.value)
+        )
+        .getOrElse(JsObject.empty)
       actual mustBe expected
   }
 

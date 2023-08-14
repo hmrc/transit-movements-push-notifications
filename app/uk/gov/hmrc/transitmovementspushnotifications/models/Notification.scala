@@ -24,6 +24,7 @@ sealed trait Notification extends Product with Serializable {
   val messageUri: String
   val messageId: MessageId
   val notificationType: NotificationType
+  val enrollmentEORINumber: Option[EORINumber]
 }
 
 case class MessageReceivedNotification(
@@ -31,14 +32,21 @@ case class MessageReceivedNotification(
   messageId: MessageId,
   movementId: MovementId,
   movementType: MovementType,
+  enrollmentEORINumber: Option[EORINumber],
   messageType: Option[MessageType],
   messageBody: Option[String]
 ) extends Notification {
   override val notificationType: NotificationType = NotificationType.MESSAGE_RECEIVED
 }
 
-case class SubmissionNotification(messageUri: String, messageId: MessageId, movementId: MovementId, movementType: MovementType, response: Option[JsValue])
-    extends Notification {
+case class SubmissionNotification(
+  messageUri: String,
+  messageId: MessageId,
+  movementId: MovementId,
+  movementType: MovementType,
+  enrollmentEORINumber: Option[EORINumber],
+  response: Option[JsValue]
+) extends Notification {
   override val notificationType: NotificationType = NotificationType.SUBMISSION_NOTIFICATION
 }
 
@@ -47,6 +55,13 @@ object Notification {
   private def movementId(movementId: MovementId, movementType: MovementType): JsObject =
     if (movementType == MovementType.Departure) Json.obj("departureId" -> movementId.value)
     else Json.obj("arrivalId"                                          -> movementId.value)
+
+  private def enrollmentEORINumber(enrollmentEORINumber: Option[EORINumber]): JsObject =
+    enrollmentEORINumber
+      .map(
+        eori => Json.obj("enrollmentEORINumber" -> eori.value)
+      )
+      .getOrElse(JsObject.empty)
 
   private val messageReceivedNotificationWrites: OWrites[MessageReceivedNotification] = OWrites {
     notification =>
@@ -77,9 +92,12 @@ object Notification {
         "messageUri"       -> notification.messageUri,
         "notificationType" -> notification.notificationType.toString,
         "messageId"        -> notification.messageId.value
-      ) ++ movementId(notification.movementId, notification.movementType) ++ (notification match {
-        case x: MessageReceivedNotification => messageReceivedNotificationWrites.writes(x)
-        case x: SubmissionNotification      => submissionNotificationWrites.writes(x)
-      })
+      ) ++
+        enrollmentEORINumber(notification.enrollmentEORINumber) ++
+        movementId(notification.movementId, notification.movementType) ++
+        (notification match {
+          case x: MessageReceivedNotification => messageReceivedNotificationWrites.writes(x)
+          case x: SubmissionNotification      => submissionNotificationWrites.writes(x)
+        })
   }
 }
