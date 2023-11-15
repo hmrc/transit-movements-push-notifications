@@ -135,7 +135,8 @@ class PushNotificationController @Inject() (
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](
         baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
-        result => Created(Json.toJson(BoxResponse(result.boxId)))
+//        result => Created(Json.toJson(BoxResponse(result.boxId)))
+        result => NotFound(Json.obj("message" -> "Box Id not found")) //TODO: added to test PushPullNotificationGetBoxFailed audit event and should revert this
       )
   }
 
