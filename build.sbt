@@ -1,13 +1,13 @@
 import play.sbt.routes.RoutesKeys
 import scoverage.ScoverageKeys
-import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
-import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin.publishingSettings
+import uk.gov.hmrc.DefaultBuildSettings
+
+ThisBuild / majorVersion := 0
+ThisBuild / scalaVersion := "2.13.12"
 
 lazy val microservice = Project("transit-movements-push-notifications", file("."))
-  .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
+  .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .settings(
-    majorVersion := 0,
-    scalaVersion := "2.13.8",
     PlayKeys.playDefaultPort := 9508,
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     // https://www.scala-lang.org/2021/01/12/configuring-and-suppressing-warnings.html
@@ -19,11 +19,18 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
       "uk.gov.hmrc.transitmovementspushnotifications.models.Bindings._"
     )
   )
-  .configs(IntegrationTest)
-  .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(CodeCoverageSettings.settings: _*)
   .settings(inThisBuild(buildSettings))
+
+lazy val it = project
+  .enablePlugins(PlayScala)
+  .dependsOn(microservice % "test->test") // the "test->test" allows reusing test code and test dependencies
+  .settings(DefaultBuildSettings.itSettings())
+  .settings(
+    libraryDependencies ++= AppDependencies.test
+  )
+  .settings(CodeCoverageSettings.settings: _*)
 
 // Scoverage exclusions and minimums
 lazy val scoverageSettings = Def.settings(
@@ -48,15 +55,6 @@ lazy val scoverageSettings = Def.settings(
     ".*GuiceInjector",
     ".*Test.*"
   ).mkString(";")
-)
-
-lazy val itSettings = Seq(
-  // Must fork so that config system properties are set
-  fork := true,
-  unmanagedResourceDirectories += (baseDirectory.value / "it" / "resources"),
-  javaOptions ++= Seq(
-    "-Dlogger.resource=it.logback.xml"
-  )
 )
 
 // Settings for the whole build

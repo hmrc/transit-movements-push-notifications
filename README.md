@@ -6,9 +6,9 @@ This is a microservice for an internal API to associate a movement to a PPNS box
 This microservice is in [Beta](https://www.gov.uk/help/beta). The signature may be subject to change.
 
 ### Prerequisites
-- Scala 2.12.11
+- Scala 2.13.12
 - Java 11
-- sbt > 1.3.13
+- sbt 1.9.7
 - [Service Manager](https://github.com/hmrc/service-manager)
 
 ### Development Setup
@@ -20,7 +20,7 @@ To run the whole stack, using service manager: `sm --start CTC_TRADERS_API`
 Task | Description | Command
 :-------|:------------|:-----
 test | Runs the standard unit tests | ```$ sbt test```
-it:test  | Runs the integration tests | ```$ sbt it:test ```
+it/test  | Runs the integration tests | ```$ sbt it/test ```
 dependencyCheck | Runs dependency-check against the current project. It aggregates dependencies and generates a report | ```$ sbt dependencyCheck```
 dependencyUpdates |  Shows a list of project dependencies that can be updated | ```$ sbt dependencyUpdates```
 dependencyUpdatesReport | Writes a list of project dependencies to a file | ```$ sbt dependencyUpdatesReport```

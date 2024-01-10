@@ -14,13 +14,9 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.transitmovementspushnotifications.connectors
+package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
-import com.github.tomakehurst.wiremock.client.WireMock.get
-import com.github.tomakehurst.wiremock.client.WireMock.post
-import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
+import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalatest.OptionValues
@@ -45,13 +41,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageReceivedNotification
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 

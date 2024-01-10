@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import org.mockito.Mockito.when
 import org.scalacheck.Gen
 import org.scalatest.exceptions.TestFailedException
