@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
-import akka.pattern.retry
+import org.apache.pekko.pattern.retry
 import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import com.mongodb.client.model.Filters.{eq => mEq}

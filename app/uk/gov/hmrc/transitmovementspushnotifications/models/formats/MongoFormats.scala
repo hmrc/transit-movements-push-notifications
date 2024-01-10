@@ -20,27 +20,42 @@ import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
+import play.api.libs.json.__
 import uk.gov.hmrc.mongo.play.json.formats.MongoBinaryFormats
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.play.json.formats.MongoUuidFormats
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
 
+import java.time.Instant
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 trait MongoFormats extends CommonFormats with MongoBinaryFormats.Implicits with MongoJavatimeFormats.Implicits with MongoUuidFormats.Implicits {
 
+  final val localDateTimeReads: Reads[LocalDateTime] =
+    Reads
+      .at[String](__ \ "$date" \ "$numberLong")
+      .map(
+        dateTime => Instant.ofEpochMilli(dateTime.toLong).atZone(ZoneOffset.UTC).toLocalDateTime
+      )
+
   implicit val offsetDateTimeReads: Reads[OffsetDateTime] = Reads {
     value =>
-      jatLocalDateTimeFormat
+      localDateTimeReads
         .reads(value)
         .map(
           localDateTime => localDateTime.atOffset(ZoneOffset.UTC)
         )
   }
 
+  final val localDateTimeWrites: Writes[LocalDateTime] =
+    Writes
+      .at[String](__ \ "$date" \ "$numberLong")
+      .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
+
   implicit val offsetDateTimeWrites: Writes[OffsetDateTime] = Writes {
-    value => jatLocalDateTimeFormat.writes(value.toLocalDateTime)
+    value => localDateTimeWrites.writes(value.toLocalDateTime)
   }
 
   implicit val offsetDateTimeFormat: Format[OffsetDateTime] = Format.apply(offsetDateTimeReads, offsetDateTimeWrites)
