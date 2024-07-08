@@ -17,6 +17,7 @@
 package uk.gov.hmrc.transitmovementspushnotifications.controllers
 
 import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
 import cats.data.EitherT
@@ -96,8 +97,8 @@ class PushNotificationController @Inject() (
     }
 
   def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
-    internalAuth(notificationPermission).streamWithSize {
-      implicit request => size =>
+    internalAuth(notificationPermission).async(streamFromMemory) {
+      implicit request =>
         (for {
           boxAssociation <- boxAssociationRepository.getBoxAssociation(movementId).asPresentation
           messageType = hc
@@ -106,8 +107,10 @@ class PushNotificationController @Inject() (
             .map(
               x => MessageType(x._2)
             )
+          source <- reUsableSource(request)
+          size   <- calculateSize(source.lift(1).get)
           result <- pushPullNotificationService
-            .sendPushNotification(boxAssociation, size, messageId, request.body, notificationType, messageType)
+            .sendPushNotification(boxAssociation, size, messageId, source.lift(2).get, notificationType, messageType)
             .asPresentation
         } yield result).fold[Result](
           baseError => Status(baseError.code.statusCode)(Json.toJson(baseError)),
@@ -148,5 +151,37 @@ class PushNotificationController @Inject() (
           PresentationError.badRequestError("Expected clientId, movementType and enrollmentEORINumber to be present in the body")
         )
     }
+
+  private def materializeSource(source: Source[ByteString, _]): EitherT[Future, PresentationError, Seq[ByteString]] =
+    EitherT(
+      source
+        .runWith(Sink.seq)
+        .map(Right(_): Either[PresentationError, Seq[ByteString]])
+        .recover {
+          error =>
+            Left(PresentationError.internalServerError(cause = Some(error)))
+        }
+    )
+  // Function to create a new source from the materialized sequence
+  private def createReusableSource(seq: Seq[ByteString]): Source[ByteString, _] = Source(seq.toList)
+
+  private def reUsableSource(request: Request[Source[ByteString, _]]): EitherT[Future, PresentationError, List[Source[ByteString, _]]] = for {
+    byteStringSeq <- materializeSource(request.body)
+  } yield List.fill(3)(createReusableSource(byteStringSeq))
+
+  // Function to calculate the size using EitherT
+  private def calculateSize(source: Source[ByteString, _]): EitherT[Future, PresentationError, Long] = {
+    val sizeFuture: Future[Either[PresentationError, Long]] = source
+      .map(_.size.toLong)
+      .runWith(Sink.fold(0L)(_ + _))
+      .map(
+        size => Right(size): Either[PresentationError, Long]
+      )
+      .recover {
+        case _: Exception => Left(PresentationError.internalServerError())
+      }
+
+    EitherT(sizeFuture)
+  }
 
 }
