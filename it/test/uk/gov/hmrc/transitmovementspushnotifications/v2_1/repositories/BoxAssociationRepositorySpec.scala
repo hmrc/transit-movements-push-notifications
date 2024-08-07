@@ -72,7 +72,7 @@ class BoxAssociationRepositorySpec
   override lazy val repository = new BoxAssociationRepositoryImpl(appConfig, mongoComponent, clock)
 
   "BoxAssociationRepository" should "have the correct name" in {
-    repository.collectionName shouldBe "box_association_v2_1_api"
+    repository.collectionName shouldBe "box_association_v2_1"
   }
 
   "BoxAssociationRepository" should "have the correct column associated with the expected TTL" in {
