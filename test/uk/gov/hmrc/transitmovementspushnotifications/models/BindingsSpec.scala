@@ -20,6 +20,7 @@ import org.scalacheck.Gen
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
 
 class BindingsSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPropertyChecks {
 

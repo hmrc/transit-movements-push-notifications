@@ -62,9 +62,17 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.InternalAuthActionProvider
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
+import uk.gov.hmrc.transitmovementspushnotifications.routing.routes
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
@@ -93,7 +101,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   ): Request[JsValue] =
     FakeRequest(
       method = method,
-      uri = routes.PushNotificationController.createBoxAssociation(movementId).url,
+      uri = routes.VersionedRoutingController.createBoxAssociation(movementId).url,
       headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)),
       body = body
     )
@@ -391,7 +399,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     def fakeRequest(movementId: MovementId): FakeRequest[AnyContent] = FakeRequest(
       method = PATCH,
-      uri = routes.PushNotificationController
+      uri = routes.VersionedRoutingController
         .updateAssociationTTL(movementId)
         .url,
       headers = FakeHeaders(),
@@ -468,7 +476,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ): Request[A] =
       FakeRequest(
         method = POST,
-        uri = routes.PushNotificationController
+        uri = routes.VersionedRoutingController
           .postNotificationByContentType(boxAssociation._id, messageId)
           .url,
         headers = headers,
@@ -544,7 +552,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
           lazy val request = FakeRequest(
             method = "POST",
-            uri = routes.PushNotificationController
+            uri = routes.VersionedRoutingController
               .postNotificationByContentType(boxAssociation._id, messageId)
               .url,
             headers = FakeHeaders(
@@ -721,7 +729,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ): Request[A] =
       FakeRequest(
         method = POST,
-        uri = routes.PushNotificationController
+        uri = routes.VersionedRoutingController
           .postNotification(boxAssociation._id, messageId, notificationType)
           .url,
         headers = headers,

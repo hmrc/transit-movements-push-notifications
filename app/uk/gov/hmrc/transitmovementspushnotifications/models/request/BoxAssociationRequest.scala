@@ -18,9 +18,9 @@ package uk.gov.hmrc.transitmovementspushnotifications.models.request
 
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementType
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
 
 case class BoxAssociationRequest(clientId: String, movementType: MovementType, boxId: Option[BoxId], enrollmentEORINumber: EORINumber)

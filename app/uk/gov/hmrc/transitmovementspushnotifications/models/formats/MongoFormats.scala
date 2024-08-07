@@ -24,7 +24,7 @@ import play.api.libs.json.__
 import uk.gov.hmrc.mongo.play.json.formats.MongoBinaryFormats
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 import uk.gov.hmrc.mongo.play.json.formats.MongoUuidFormats
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxAssociation
 
 import java.time.Instant
 import java.time.LocalDateTime

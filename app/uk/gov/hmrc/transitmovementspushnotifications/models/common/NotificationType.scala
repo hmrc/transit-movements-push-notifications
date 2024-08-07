@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.models.common
 
 import play.api.libs.json.JsError
 import play.api.libs.json.JsString
@@ -22,6 +22,8 @@ import play.api.libs.json.JsSuccess
 import play.api.libs.json.Json
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
+
+import scala.collection.Seq
 
 sealed trait NotificationType {
   def pathRepresentation: String

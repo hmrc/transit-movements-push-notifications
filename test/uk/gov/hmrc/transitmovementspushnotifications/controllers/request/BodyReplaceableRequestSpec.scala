@@ -22,7 +22,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
-import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
 
 class BodyReplaceableRequestSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPropertyChecks {
 

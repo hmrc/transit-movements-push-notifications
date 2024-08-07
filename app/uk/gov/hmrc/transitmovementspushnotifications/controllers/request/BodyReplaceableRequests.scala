@@ -18,7 +18,7 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.request
 
 import play.api.mvc.Request
 import play.api.mvc.WrappedRequest
-import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
 
 abstract class BodyReplaceableRequest[+R[_], B](request: Request[B]) extends WrappedRequest[B](request) {
   def replaceBody(body: B): R[B]

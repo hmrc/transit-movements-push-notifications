@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.services.errors
 
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
 
 sealed abstract class PushPullNotificationError
 

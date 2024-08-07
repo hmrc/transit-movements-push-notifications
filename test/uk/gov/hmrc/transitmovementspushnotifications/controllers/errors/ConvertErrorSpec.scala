@@ -23,7 +23,7 @@ import org.scalatest.time.Span
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
 

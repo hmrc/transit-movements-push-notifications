@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.v2_1.models.responses
 
 import play.api.libs.json.Json
-import play.api.libs.json.OFormat
-import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.v2_1.models.formats.CommonFormats
 
-import java.time.OffsetDateTime
+case class BoxResponse(boxId: BoxId)
 
-case class BoxAssociation(_id: MovementId, boxId: BoxId, movementType: MovementType, updated: OffsetDateTime, enrollmentEORINumber: Option[EORINumber])
-
-object BoxAssociation extends CommonFormats {
-  implicit val boxAssociationFormat: OFormat[BoxAssociation] = Json.format[BoxAssociation]
+object BoxResponse extends CommonFormats {
+  implicit val boxResponseFormat = Json.format[BoxResponse]
 }

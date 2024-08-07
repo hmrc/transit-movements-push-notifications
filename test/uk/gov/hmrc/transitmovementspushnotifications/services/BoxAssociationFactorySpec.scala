@@ -20,11 +20,11 @@ import org.scalacheck.Arbitrary.arbitrary
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxAssociation
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.EORINumber
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementType
 
 import java.security.SecureRandom
 import java.time.Clock
@@ -48,7 +48,7 @@ class BoxAssociationFactorySpec extends SpecBase with ModelGenerators with Scala
     ) {
       (boxId, movementId, movementType, enrollmentEORINumber) =>
         val boxAssociation = sut.create(boxId, movementId, movementType, enrollmentEORINumber)
-        boxAssociation mustBe BoxAssociation(
+        boxAssociation mustBe common.BoxAssociation(
           movementId,
           boxId,
           movementType,
