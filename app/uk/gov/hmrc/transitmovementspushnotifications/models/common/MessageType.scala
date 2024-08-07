@@ -14,19 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.models.common
 
-import play.api.http.Writeable
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 
-object EORINumber {
-  implicit lazy val eoriNumberFormats: Format[EORINumber] = Json.valueFormat[EORINumber]
-
-  implicit lazy val eoriNumberWriteable: Writeable[EORINumber] = Writeable(
-    eoriNumber => implicitly[Writeable[String]].transform(eoriNumber.value),
-    None
-  )
+object MessageType {
+  implicit val format: Format[MessageType] = Json.valueFormat
 }
 
-case class EORINumber(value: String) extends AnyVal
+case class MessageType(value: String) extends AnyVal

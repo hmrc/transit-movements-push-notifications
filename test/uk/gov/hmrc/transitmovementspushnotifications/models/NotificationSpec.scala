@@ -24,6 +24,14 @@ import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageReceivedNotification
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.Notification
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.SubmissionNotification
 
 class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPropertyChecks with ModelGenerators {
   private val gen = Gen.stringOfN(10, Gen.alphaChar)

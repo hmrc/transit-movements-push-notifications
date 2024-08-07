@@ -19,7 +19,16 @@ package uk.gov.hmrc.transitmovementspushnotifications.generators
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
+import uk.gov.hmrc.transitmovementspushnotifications.models.common
 import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.EORINumber
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -106,7 +115,7 @@ trait ModelGenerators extends BaseGenerators {
         movementType <- arbitrary[MovementType]
         updated      <- arbitrary[OffsetDateTime]
         eori         <- arbitrary[EORINumber]
-      } yield BoxAssociation(movementId, boxId, movementType, updated, Some(eori))
+      } yield common.BoxAssociation(movementId, boxId, movementType, updated, Some(eori))
     }
 
   implicit lazy val arbitraryNotificationType: Arbitrary[NotificationType] =

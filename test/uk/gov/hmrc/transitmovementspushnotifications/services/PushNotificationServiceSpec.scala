@@ -36,7 +36,13 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageReceivedNotification
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.SubmissionNotification
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._

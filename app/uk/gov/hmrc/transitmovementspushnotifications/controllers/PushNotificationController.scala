@@ -38,10 +38,10 @@ import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.Interna
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.stream.StreamingParsers
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
-import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
-import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
-import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MessageType
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository

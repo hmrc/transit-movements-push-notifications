@@ -26,7 +26,8 @@ import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json._
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxAssociation
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 

@@ -1,9 +1,9 @@
 # microservice specific routes
 
-POST       /traders/movements/:movementId/box                                    uk.gov.hmrc.transitmovementspushnotifications.controllers.PushNotificationController.createBoxAssociation(movementId: MovementId)
+POST       /traders/movements/:movementId/box                                    uk.gov.hmrc.transitmovementspushnotifications.routing.VersionedRoutingController.createBoxAssociation(movementId: MovementId)
 
-PATCH      /traders/movements/:movementId                                        uk.gov.hmrc.transitmovementspushnotifications.controllers.PushNotificationController.updateAssociationTTL(movementId: MovementId)
+PATCH      /traders/movements/:movementId                                        uk.gov.hmrc.transitmovementspushnotifications.routing.VersionedRoutingController.updateAssociationTTL(movementId: MovementId)
 
-POST       /traders/movements/:movementId/messages/:messageId                    uk.gov.hmrc.transitmovementspushnotifications.controllers.PushNotificationController.postNotificationByContentType(movementId: MovementId, messageId: MessageId)
+POST       /traders/movements/:movementId/messages/:messageId                    uk.gov.hmrc.transitmovementspushnotifications.routing.VersionedRoutingController.postNotificationByContentType(movementId: MovementId, messageId: MessageId)
 
-POST       /traders/movements/:movementId/messages/:messageId/:notificationType  uk.gov.hmrc.transitmovementspushnotifications.controllers.PushNotificationController.postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType)
+POST       /traders/movements/:movementId/messages/:messageId/:notificationType  uk.gov.hmrc.transitmovementspushnotifications.routing.VersionedRoutingController.postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType)

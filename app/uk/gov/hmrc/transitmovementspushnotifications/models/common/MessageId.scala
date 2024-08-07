@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.models.common
 
-import play.api.libs.json.Format
 import play.api.libs.json.Json
 
-object MessageType {
-  implicit val format: Format[MessageType] = Json.valueFormat
-}
+case class MessageId(value: String) extends AnyVal
 
-case class MessageType(value: String) extends AnyVal
+object MessageId {
+  implicit val messageIdFormat = Json.format[MessageId]
+}

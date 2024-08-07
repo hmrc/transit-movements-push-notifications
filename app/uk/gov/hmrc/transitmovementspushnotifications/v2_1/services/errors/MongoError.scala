@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.models
+package uk.gov.hmrc.transitmovementspushnotifications.v2_1.services.errors
 
-import play.api.libs.json.Json
+sealed abstract class MongoError
 
-case class MovementId(value: String) extends AnyVal
-
-object MovementId {
-  implicit val movementIdFormat = Json.format[MovementId]
+object MongoError {
+  case class UnexpectedError(exception: Option[Throwable] = None) extends MongoError
+  case class InsertNotAcknowledged(message: String)               extends MongoError
+  case class DocumentNotFound(message: String)                    extends MongoError
 }

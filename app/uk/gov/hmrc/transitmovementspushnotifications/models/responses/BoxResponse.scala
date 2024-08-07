@@ -17,7 +17,7 @@
 package uk.gov.hmrc.transitmovementspushnotifications.models.responses
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
 
 case class BoxResponse(boxId: BoxId)

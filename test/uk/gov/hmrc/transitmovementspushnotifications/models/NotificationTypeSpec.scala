@@ -23,6 +23,7 @@ import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.libs.json.JsError
 import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
 
 class NotificationTypeSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPropertyChecks {
 

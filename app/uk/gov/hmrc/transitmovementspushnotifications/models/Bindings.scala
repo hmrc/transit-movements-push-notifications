@@ -17,6 +17,7 @@
 package uk.gov.hmrc.transitmovementspushnotifications.models
 
 import play.api.mvc.PathBindable
+import uk.gov.hmrc.transitmovementspushnotifications.models.common.NotificationType
 
 object Bindings {
 
