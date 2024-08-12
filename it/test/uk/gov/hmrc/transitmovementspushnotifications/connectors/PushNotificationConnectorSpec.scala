@@ -40,6 +40,8 @@ import play.api.test.Helpers.running
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
@@ -78,6 +80,36 @@ class PushNotificationConnectorSpec
                 {
                   "boxId": "${boxId.value}",
                   "boxName":"${Constants.BoxName}",
+                  "boxCreator":{
+                      "clientId": "$clientId"
+                  }
+                }
+              """)
+          )
+        }
+
+        val app = applicationBuilder.build()
+
+        running(app) {
+          val connector = app.injector.instanceOf[PushPullNotificationConnector]
+          whenReady(connector.getBox(clientId)) {
+            result =>
+              result mustEqual BoxResponse(boxId)
+          }
+        }
+
+      }
+
+      "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON with BoxNameFinal" in {
+        implicit val headerCarrier: HeaderCarrier = HeaderCarrier(otherHeaders = Seq(APIVersionHeaderKey -> APIVersionFinalHeaderValue))
+        server.stubFor {
+          get(urlPathEqualTo("/box")).willReturn(
+            aResponse()
+              .withStatus(OK)
+              .withBody(s"""
+                {
+                  "boxId": "${boxId.value}",
+                  "boxName":"${Constants.BoxNameFinal}",
                   "boxCreator":{
                       "clientId": "$clientId"
                   }
