@@ -31,6 +31,8 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -65,7 +67,13 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId)))
+    val query = hc.headers(Seq(APIVersionHeaderKey)).headOption match {
+      case Some(header) if header._2 == APIVersionFinalHeaderValue =>
+        QueryString.fromPairs(("boxName", Constants.BoxNameFinal), ("clientId", clientId))
+      case _ =>
+        QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
+    }
+    val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(query)
 
     httpClientV2
       .get(url"$url")
