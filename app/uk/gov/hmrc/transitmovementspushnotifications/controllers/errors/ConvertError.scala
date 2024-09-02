@@ -39,7 +39,7 @@ trait ConvertError {
     def convert(input: E): PresentationError
   }
 
-  implicit val mongoErrorConverter = new Converter[MongoError] {
+  implicit val mongoErrorConverter: Converter[MongoError] = new Converter[MongoError] {
 
     def convert(mongoError: MongoError): PresentationError = mongoError match {
       case MongoError.UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
@@ -48,14 +48,14 @@ trait ConvertError {
     }
   }
 
-  implicit val headerExtractErrorConverter = new Converter[HeaderExtractError] {
+  implicit val headerExtractErrorConverter: Converter[HeaderExtractError] = new Converter[HeaderExtractError] {
 
     def convert(headerExtractError: HeaderExtractError): PresentationError = headerExtractError match {
       case NoHeaderFound(message) => PresentationError.badRequestError(message)
     }
   }
 
-  implicit val ppnsErrorConverter = new Converter[PushPullNotificationError] {
+  implicit val ppnsErrorConverter: Converter[PushPullNotificationError] = new Converter[PushPullNotificationError] {
 
     def convert(pushPullNotificationError: PushPullNotificationError): PresentationError = pushPullNotificationError match {
       case UnexpectedError(ex) => PresentationError.internalServerError(cause = ex)
