@@ -25,6 +25,6 @@ object TestActorSystem {
 }
 
 trait TestActorSystem { self: Suite =>
-  implicit val system: ActorSystem        = ActorSystem("test")
-  implicit val materializer: Materializer = Materializer(system)
+  implicit val system: ActorSystem        = TestActorSystem.system
+  implicit val materializer: Materializer = Materializer(TestActorSystem.system)
 }
