@@ -32,7 +32,7 @@ import scala.concurrent.Future
 
 class ConvertErrorSpec extends SpecBase {
 
-  implicit val defaultPatience =
+  implicit val defaultPatience: PatienceConfig =
     PatienceConfig(timeout = Span(2, Seconds), interval = Span(5, Millis))
 
   object Harness extends ConvertError

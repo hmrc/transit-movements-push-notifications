@@ -23,7 +23,6 @@ import org.apache.pekko.util.ByteString
 import cats.data.EitherT
 import play.api.Logging
 import play.api.http.MimeTypes
-import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -62,8 +61,7 @@ class PushNotificationController @Inject() (
   internalAuth: InternalAuthActionProvider
 )(implicit
   val materializer: Materializer,
-  ec: ExecutionContext,
-  temporaryFileCreator: TemporaryFileCreator
+  ec: ExecutionContext
 ) extends BackendController(cc)
     with ConvertError
     with ContentTypeRouting

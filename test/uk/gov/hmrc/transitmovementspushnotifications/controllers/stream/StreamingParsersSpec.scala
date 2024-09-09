@@ -28,6 +28,7 @@ import org.scalatest.matchers.must.Matchers
 import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.http.Status.OK
+import play.api.libs.Files
 import play.api.libs.Files.SingletonTemporaryFileCreator
 import play.api.mvc.Action
 import play.api.mvc.BaseController
@@ -50,9 +51,9 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
 
   object Harness extends BaseController with StreamingParsers with Logging {
 
-    override val controllerComponents = stubControllerComponents()
-    implicit val temporaryFileCreator = SingletonTemporaryFileCreator
-    implicit val materializer         = Materializer(TestActorSystem.system)
+    override val controllerComponents                                           = stubControllerComponents()
+    implicit val temporaryFileCreator: Files.SingletonTemporaryFileCreator.type = SingletonTemporaryFileCreator
+    implicit val materializer: Materializer                                     = Materializer(TestActorSystem.system)
 
     def testFromMemory: Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
       request => result.apply(request).run(request.body)(materializer)

@@ -17,9 +17,10 @@
 package uk.gov.hmrc.transitmovementspushnotifications.models
 
 import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 
 case class BoxId(value: String) extends AnyVal
 
 object BoxId {
-  implicit val boxIdFormat = Json.format[BoxId]
+  implicit val boxIdFormat: OFormat[BoxId] = Json.format[BoxId]
 }

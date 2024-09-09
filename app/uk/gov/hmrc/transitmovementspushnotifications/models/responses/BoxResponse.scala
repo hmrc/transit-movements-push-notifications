@@ -17,11 +17,12 @@
 package uk.gov.hmrc.transitmovementspushnotifications.models.responses
 
 import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats.CommonFormats
 
 case class BoxResponse(boxId: BoxId)
 
 object BoxResponse extends CommonFormats {
-  implicit val boxResponseFormat = Json.format[BoxResponse]
+  implicit val boxResponseFormat: OFormat[BoxResponse] = Json.format[BoxResponse]
 }
