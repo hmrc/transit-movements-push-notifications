@@ -61,7 +61,7 @@ class PushNotificationConnectorSpec
 
   implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
 
-  implicit val defaultPatience =
+  implicit val defaultPatience: PatienceConfig =
     PatienceConfig(timeout = Span(2, Seconds), interval = Span(5, Millis))
 
   "PushNotificationConnector" - {
@@ -367,7 +367,7 @@ class PushNotificationConnectorSpec
         }
       }
 
-      for (error <- List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE))
+      for (error <- List(BAD_REQUEST, FORBIDDEN, NOT_FOUND, REQUEST_ENTITY_TOO_LARGE, INTERNAL_SERVER_ERROR))
         "when called with an invalid request" - {
           s"should return error an error response: $error" in forAll(
             arbitrary[BoxId],

@@ -74,6 +74,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.services.PushPullNotificati
 import java.nio.charset.StandardCharsets
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
@@ -141,6 +142,12 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     case class JsonBody(clientId: String, movementType: String, enrollmentEORINumber: String)
 
+    object JsonBody {
+
+      def unapply(jsonBody: JsonBody): Option[(String, String, String)] =
+        Some((jsonBody.clientId, jsonBody.movementType, jsonBody.enrollmentEORINumber))
+    }
+
     implicit val writes: OWrites[JsonBody] = (
       (__ \ "clientId").write[String] and
         (__ \ "movementType").write[String] and
@@ -156,6 +163,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     val invalidMovementTypeBody: Gen[JsonBody] =
       for {
+
         clientId     <- Gen.alphaNumStr
         movementType <- Gen.hexStr
         eori         <- arbitrary[EORINumber]
@@ -178,7 +186,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       (boxAssociation, body) =>
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.rightT(boxAssociation.boxId))
+          .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         when(
           mockMovementBoxAssociationFactory.create(
@@ -191,7 +199,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           .thenReturn(boxAssociation)
 
         when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.rightT(boxAssociation))
+          .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
@@ -214,7 +222,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       (boxAssociation, body) =>
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.rightT(boxAssociation.boxId))
+          .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
@@ -248,7 +256,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.rightT(boxAssociation.boxId))
+          .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
 
@@ -272,7 +280,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       (boxAssociation, body) =>
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.leftT(PushPullNotificationError.BoxNotFound(BoxId("test"))))
+          .thenReturn(EitherT.leftT[Future, BoxId](PushPullNotificationError.BoxNotFound(BoxId("test"))))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
@@ -292,7 +300,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       (boxAssociation, body) =>
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.leftT(PushPullNotificationError.DefaultBoxNotFound))
+          .thenReturn(EitherT.leftT[Future, BoxId](PushPullNotificationError.DefaultBoxNotFound))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
@@ -332,7 +340,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       (boxAssociation, body) =>
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
+          .thenReturn(EitherT.leftT[Future, BoxId](PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
@@ -356,7 +364,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       (boxAssociation, body) =>
         resetInternalAuth()
         when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
-          .thenReturn(EitherT.rightT(boxAssociation.boxId))
+          .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         when(
           mockMovementBoxAssociationFactory.create(
@@ -369,7 +377,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
           .thenReturn(boxAssociation)
 
         when(mockMovementBoxAssociationRepository.insert(eqTo(boxAssociation)))
-          .thenReturn(EitherT.leftT(InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id}")))
+          .thenReturn(EitherT.leftT[Future, BoxAssociation](InsertNotAcknowledged(s"Insert failed for movement ${boxAssociation._id}")))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
 
@@ -401,7 +409,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "return No Content when an update succeeded" in forAll(arbitrary[MovementId]) {
       movementId =>
         resetInternalAuth()
-        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value)))).thenReturn(EitherT.rightT(()))
+        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value)))).thenReturn(EitherT.liftF(Future.unit))
 
         val result =
           controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
@@ -416,7 +424,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     "return Internal Server Error when an update failed with an exception" in forAll(arbitrary[MovementId]) {
       movementId =>
         resetInternalAuth()
-        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value)))).thenReturn(EitherT.leftT(MongoError.UnexpectedError()))
+        when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value))))
+          .thenReturn(EitherT.leftT[Future, Unit](MongoError.UnexpectedError()))
 
         val result =
           controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
@@ -431,7 +440,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       movementId =>
         resetInternalAuth()
         when(mockMovementBoxAssociationRepository.update(MovementId(eqTo(movementId.value))))
-          .thenReturn(EitherT.leftT(MongoError.DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}")))
+          .thenReturn(EitherT.leftT[Future, Unit](MongoError.DocumentNotFound(s"Could not find BoxAssociation with id: ${movementId.value}")))
 
         val result =
           controller.updateAssociationTTL(movementId)(fakeRequest(movementId))
@@ -450,7 +459,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   "postNotificationByContentType" - {
 
-    val validXMLBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
+    val validXMLBody: Source[ByteString, ?] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
 
     val validJSONBody = Json.toJson(
       Json.obj(
@@ -481,18 +490,18 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.rightT(boxAssociation))
+            .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
               any[Long],
               MessageId(eqTo(messageId.value)),
-              any[Source[ByteString, _]],
+              any[Source[ByteString, ?]],
               eqTo(NotificationType.MESSAGE_RECEIVED),
               eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
-          ).thenReturn(EitherT.rightT(()))
+          ).thenReturn(EitherT.liftF(Future.unit))
 
           val result =
             controller.postNotificationByContentType(boxAssociation._id, messageId)(
@@ -529,18 +538,18 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.rightT(boxAssociation))
+            .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
               eqTo(0L),
               MessageId(eqTo(messageId.value)),
-              any[Source[ByteString, _]],
+              any[Source[ByteString, ?]],
               eqTo(NotificationType.MESSAGE_RECEIVED),
               eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
-          ).thenReturn(EitherT.rightT(()))
+          ).thenReturn(EitherT.liftF(Future.unit))
 
           lazy val request = FakeRequest(
             method = "POST",
@@ -571,18 +580,18 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.rightT(boxAssociation))
+            .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
               any[Long],
               MessageId(eqTo(messageId.value)),
-              any[Source[ByteString, _]],
+              any[Source[ByteString, ?]],
               eqTo(NotificationType.SUBMISSION_NOTIFICATION),
               eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
-          ).thenReturn(EitherT.rightT(()))
+          ).thenReturn(EitherT.liftF(Future.unit))
 
           val result =
             controller.postNotificationByContentType(boxAssociation._id, messageId)(
@@ -615,7 +624,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
+            .thenReturn(EitherT.leftT[Future, BoxAssociation](MongoError.DocumentNotFound("box id not found")))
 
           when(
             mockPushPullNotificationService
@@ -623,7 +632,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Long],
                 MessageId(eqTo(messageId.value)),
-                any[Source[ByteString, _]],
+                any[Source[ByteString, ?]],
                 eqTo(NotificationType.MESSAGE_RECEIVED),
                 eqTo(messageTypeMaybe)
               )(
@@ -631,7 +640,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 any[HeaderCarrier],
                 any[Materializer]
               )
-          ).thenReturn(EitherT.rightT(()))
+          ).thenReturn(EitherT.liftF(Future.unit))
 
           val result =
             controller.postNotificationByContentType(boxAssociation._id, messageId)(
@@ -664,7 +673,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.rightT(boxAssociation))
+            .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
           when(
             mockPushPullNotificationService
@@ -672,7 +681,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Long],
                 MessageId(eqTo(messageId.value)),
-                any[Source[ByteString, _]],
+                any[Source[ByteString, ?]],
                 eqTo(NotificationType.MESSAGE_RECEIVED),
                 eqTo(messageTypeMaybe)
               )(
@@ -680,7 +689,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 any[HeaderCarrier],
                 any[Materializer]
               )
-          ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
+          ).thenReturn(EitherT.leftT[Future, Unit](PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
 
           val result =
             controller.postNotificationByContentType(boxAssociation._id, messageId)(
@@ -710,7 +719,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
   "postNotification" - {
 
-    val validXMLBody: Source[ByteString, _] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
+    val validXMLBody: Source[ByteString, ?] = Source.single(ByteString(<CC015>Hello</CC015>.mkString, StandardCharsets.UTF_8))
 
     def fakePostNotification[A](
       headers: FakeHeaders,
@@ -739,18 +748,18 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe, notificationType) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.rightT(boxAssociation))
+            .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
           when(
             mockPushPullNotificationService.sendPushNotification(
               eqTo(boxAssociation),
               any[Long],
               MessageId(eqTo(messageId.value)),
-              any[Source[ByteString, _]],
+              any[Source[ByteString, ?]],
               eqTo(notificationType),
               eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
-          ).thenReturn(EitherT.rightT(()))
+          ).thenReturn((EitherT.liftF(Future.unit)))
 
           val result =
             controller.postNotification(boxAssociation._id, messageId, notificationType)(
@@ -789,7 +798,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe, notificationType) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.leftT(MongoError.DocumentNotFound("box id not found")))
+            .thenReturn(EitherT.leftT[Future, BoxAssociation](MongoError.DocumentNotFound("box id not found")))
 
           when(
             mockPushPullNotificationService
@@ -797,7 +806,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Long],
                 MessageId(eqTo(messageId.value)),
-                any[Source[ByteString, _]],
+                any[Source[ByteString, ?]],
                 eqTo(notificationType),
                 eqTo(messageTypeMaybe)
               )(
@@ -805,7 +814,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 any[HeaderCarrier],
                 any[Materializer]
               )
-          ).thenReturn(EitherT.rightT(()))
+          ).thenReturn(EitherT.liftF(Future.unit))
 
           val result =
             controller.postNotification(boxAssociation._id, messageId, notificationType)(
@@ -844,7 +853,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         (boxAssociation, messageId, messageTypeMaybe, notificationType) =>
           resetInternalAuth()
           when(mockMovementBoxAssociationRepository.getBoxAssociation(MovementId(eqTo(boxAssociation._id.value))))
-            .thenReturn(EitherT.rightT(boxAssociation))
+            .thenReturn(EitherT.rightT[Future, BoxAssociation](boxAssociation))
 
           when(
             mockPushPullNotificationService
@@ -852,7 +861,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 eqTo(boxAssociation),
                 any[Long],
                 MessageId(eqTo(messageId.value)),
-                any[Source[ByteString, _]],
+                any[Source[ByteString, ?]],
                 eqTo(notificationType),
                 eqTo(messageTypeMaybe)
               )(
@@ -860,7 +869,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
                 any[HeaderCarrier],
                 any[Materializer]
               )
-          ).thenReturn(EitherT.leftT(PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
+          ).thenReturn(EitherT.leftT[Future, Unit](PushPullNotificationError.UnexpectedError(Some(new Exception(s"Unexpected error")))))
 
           val result =
             controller.postNotification(boxAssociation._id, messageId, notificationType)(

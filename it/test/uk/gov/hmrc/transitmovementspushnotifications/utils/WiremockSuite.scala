@@ -65,14 +65,14 @@ trait GuiceWiremockSuite extends WiremockSuite with GuiceFakeApplicationFactory 
         portConfigKey.map {
           key =>
             key -> server.port.toString()
-        }: _*
+        }*
       )
-      .overrides(bindings: _*)
+      .overrides(bindings*)
 
-  override lazy val fakeApplication: Application =
+  override def fakeApplication(): Application =
     applicationBuilder.build()
 
-  protected lazy val injector: Injector = fakeApplication.injector
+  protected lazy val injector: Injector = fakeApplication().injector
 
   protected def bindings: Seq[GuiceableModule] = Seq(
     bind[Metrics].toInstance(new TestMetrics)
@@ -80,13 +80,13 @@ trait GuiceWiremockSuite extends WiremockSuite with GuiceFakeApplicationFactory 
 
   override def beforeAll(): Unit = {
     server.start()
-    fakeApplication
+    fakeApplication()
     super.beforeAll()
   }
 
   override def beforeEach(): Unit = {
     server.resetAll()
-    fakeApplication
+    fakeApplication()
     super.beforeEach()
   }
 

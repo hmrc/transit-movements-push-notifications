@@ -29,11 +29,11 @@ sealed trait NotificationType {
 
 object NotificationType {
 
-  final case object SUBMISSION_NOTIFICATION extends NotificationType {
+  case object SUBMISSION_NOTIFICATION extends NotificationType {
     override def pathRepresentation: String = "submissionNotification"
   }
 
-  final case object MESSAGE_RECEIVED extends NotificationType {
+  case object MESSAGE_RECEIVED extends NotificationType {
     override def pathRepresentation: String = "messageReceived"
   }
 
