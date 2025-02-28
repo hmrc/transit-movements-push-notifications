@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
-import org.apache.pekko.pattern.retry
 import cats.data.EitherT
 import com.google.inject.ImplementedBy
 import com.mongodb.client.model.Filters.{eq => mEq}
 import com.mongodb.client.model.Updates.{set => mSet}
+import org.apache.pekko.pattern.retry
+import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent
@@ -29,12 +30,11 @@ import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.formats._
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
-
-import java.time._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.UnexpectedError
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.DocumentNotFound
 
+import java.time._
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -86,7 +86,7 @@ class BoxAssociationRepositoryImpl @Inject() (
       )
     }
 
-  override def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, BoxAssociation] =
+  def insert(boxAssociation: BoxAssociation): EitherT[Future, MongoError, BoxAssociation] =
     mongoRetry(Try(collection.insertOne(boxAssociation)) match {
       case Success(obs) =>
         obs
@@ -106,7 +106,7 @@ class BoxAssociationRepositoryImpl @Inject() (
         Future.successful(Left(UnexpectedError(Some(ex))))
     })
 
-  override def update(movementId: MovementId): EitherT[Future, MongoError, Unit] =
+  def update(movementId: MovementId): EitherT[Future, MongoError, Unit] =
     mongoRetry(Try(collection.updateOne(mEq(movementId), setUpdated).head()) match {
       case Success(fUpdateResult) =>
         fUpdateResult
@@ -121,7 +121,7 @@ class BoxAssociationRepositoryImpl @Inject() (
       case Failure(ex) => Future.successful(Left(UnexpectedError(Some(ex))))
     })
 
-  override def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation] =
+  def getBoxAssociation(movementId: MovementId): EitherT[Future, MongoError, BoxAssociation] =
     mongoRetry(Try(collection.findOneAndUpdate(mEq(movementId), setUpdated).headOption()) match {
       case Success(fOptBox) =>
         fOptBox.map {

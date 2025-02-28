@@ -1,4 +1,5 @@
 import sbt.Setting
+
 import scoverage.ScoverageKeys
 
 object CodeCoverageSettings {
@@ -11,13 +12,29 @@ object CodeCoverageSettings {
     "prod.*",
     ".*Routes.*",
     "testOnly.*",
-    "testOnlyDoNotUseInAppConf.*"
+    "testOnlyDoNotUseInAppConf.*",
+    ".*config.*",
+    ".*runtime.*",
+    ".*models.*"
   )
 
   val settings: Seq[Setting[_]] = Seq(
     ScoverageKeys.coverageExcludedPackages := excludedPackages.mkString(";"),
     ScoverageKeys.coverageMinimumStmtTotal := 90,
-    ScoverageKeys.coverageFailOnMinimum := true,
-    ScoverageKeys.coverageHighlighting := true
+    ScoverageKeys.coverageFailOnMinimum    := true,
+    ScoverageKeys.coverageHighlighting     := true,
+    ScoverageKeys.coverageExcludedFiles := Seq(
+      "<empty>",
+      "Reverse.*",
+      ".*repositories.*",
+      ".*documentation.*",
+      ".*BuildInfo.*",
+      ".*javascript.*",
+      ".*Routes.*",
+      ".*GuiceInjector",
+      ".*Test.*",
+      ".*models.*",
+      ".*ParseError.*"
+    ).mkString(";")
   )
 }

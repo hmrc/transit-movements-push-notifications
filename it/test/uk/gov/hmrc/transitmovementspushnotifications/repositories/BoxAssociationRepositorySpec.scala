@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.repositories
 
+import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Indexes
 import org.scalacheck.Arbitrary.arbitrary
@@ -69,7 +70,7 @@ class BoxAssociationRepositorySpec
   implicit lazy val app: Application = GuiceApplicationBuilder().configure().build()
   private val appConfig              = app.injector.instanceOf[AppConfig]
 
-  override lazy val repository = new BoxAssociationRepositoryImpl(appConfig, mongoComponent, clock)
+  override val repository: BoxAssociationRepositoryImpl = new BoxAssociationRepositoryImpl(appConfig, mongoComponent, clock)
 
   "BoxAssociationRepository" should "have the correct name" in {
     repository.collectionName shouldBe "box_association"
@@ -130,8 +131,8 @@ class BoxAssociationRepositorySpec
   it should "return a Unit if it updates the timestamp of a movement that exists" in forAll(arbitrary[BoxAssociation]) {
     originalAssociation =>
       val eitherResult = for {
-        _           <- repository.insert(originalAssociation)
-        _           <- repository.update(originalAssociation._id)
+        _ <- repository.insert(originalAssociation)
+        _ = repository.update(originalAssociation._id)
         afterUpdate <- repository.getBoxAssociation(originalAssociation._id)
       } yield afterUpdate
 

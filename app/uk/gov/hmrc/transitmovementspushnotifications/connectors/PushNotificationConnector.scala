@@ -16,23 +16,23 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import com.google.inject.Inject
 import com.google.inject._
 import io.lemonlabs.uri.QueryString
-import play.api.http.Status.OK
 import play.api.http.Status._
 import play.api.http._
 import play.api.libs.json.Json
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.libs.ws.DefaultBodyWritables
+import play.api.libs.ws.JsonBodyWritables
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
+import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 
@@ -60,7 +60,11 @@ trait PushPullNotificationConnector {
 
 }
 
-class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2) extends PushPullNotificationConnector with BaseConnector {
+class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2)
+    extends PushPullNotificationConnector
+    with BaseConnector
+    with DefaultBodyWritables
+    with JsonBodyWritables {
 
   override def getBox(clientId: String)(implicit
     ec: ExecutionContext,

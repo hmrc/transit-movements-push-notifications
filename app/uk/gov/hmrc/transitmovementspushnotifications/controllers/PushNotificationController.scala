@@ -84,7 +84,7 @@ class PushNotificationController @Inject() (
     IAAction("WRITE")
   )
 
-  def postNotificationByContentType(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, _]] =
+  def postNotificationByContentType(movementId: MovementId, messageId: MessageId): Action[Source[ByteString, ?]] =
     contentTypeRoute {
       case Some(MimeTypes.XML) =>
         postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
@@ -94,7 +94,7 @@ class PushNotificationController @Inject() (
         postNotification(movementId, messageId, NotificationType.MESSAGE_RECEIVED)
     }
 
-  def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, _]] =
+  def postNotification(movementId: MovementId, messageId: MessageId, notificationType: NotificationType): Action[Source[ByteString, ?]] =
     internalAuth(notificationPermission).async(streamFromMemory) {
       implicit request =>
         (for {
@@ -150,7 +150,7 @@ class PushNotificationController @Inject() (
         )
     }
 
-  private def materializeSource(source: Source[ByteString, _]): EitherT[Future, PresentationError, Seq[ByteString]] =
+  private def materializeSource(source: Source[ByteString, ?]): EitherT[Future, PresentationError, Seq[ByteString]] =
     EitherT(
       source
         .runWith(Sink.seq)
@@ -161,14 +161,14 @@ class PushNotificationController @Inject() (
         }
     )
   // Function to create a new source from the materialized sequence
-  private def createReusableSource(seq: Seq[ByteString]): Source[ByteString, _] = Source(seq.toList)
+  private def createReusableSource(seq: Seq[ByteString]): Source[ByteString, ?] = Source(seq.toList)
 
-  private def reUsableSource(request: Request[Source[ByteString, _]]): EitherT[Future, PresentationError, List[Source[ByteString, _]]] = for {
+  private def reUsableSource(request: Request[Source[ByteString, ?]]): EitherT[Future, PresentationError, List[Source[ByteString, ?]]] = for {
     byteStringSeq <- materializeSource(request.body)
   } yield List.fill(3)(createReusableSource(byteStringSeq))
 
   // Function to calculate the size using EitherT
-  private def calculateSize(source: Source[ByteString, _]): EitherT[Future, PresentationError, Long] = {
+  private def calculateSize(source: Source[ByteString, ?]): EitherT[Future, PresentationError, Long] = {
     val sizeFuture: Future[Either[PresentationError, Long]] = source
       .map(_.size.toLong)
       .runWith(Sink.fold(0L)(_ + _))

@@ -6,9 +6,9 @@ This is a microservice for an internal API to associate a movement to a PPNS box
 This microservice is in [Beta](https://www.gov.uk/help/beta). The signature may be subject to change.
 
 ### Prerequisites
-- Scala 2.13.12
+- Scala 3.5.2
 - Java 21
-- sbt 1.9.7
+- sbt 1.10.1
 - [Service Manager](https://github.com/hmrc/service-manager)
 
 ### Development Setup

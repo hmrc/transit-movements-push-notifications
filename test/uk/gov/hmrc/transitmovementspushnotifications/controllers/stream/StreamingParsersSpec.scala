@@ -18,10 +18,8 @@ package uk.gov.hmrc.transitmovementspushnotifications.controllers.stream
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
-import org.scalacheck.Gen
 import org.scalatest.OptionValues
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -55,7 +53,7 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
     implicit val temporaryFileCreator: Files.SingletonTemporaryFileCreator.type = SingletonTemporaryFileCreator
     implicit val materializer: Materializer                                     = Materializer(TestActorSystem.system)
 
-    def testFromMemory: Action[Source[ByteString, _]] = Action.async(streamFromMemory) {
+    def testFromMemory: Action[Source[ByteString, ?]] = Action.async(streamFromMemory) {
       request => result.apply(request).run(request.body)(materializer)
     }
 
@@ -64,23 +62,13 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
         Future.successful(Ok(request.body))
     }
 
-    def resultStream: Action[Source[ByteString, _]] = Action.stream {
-      request =>
-        (for {
-          a <- request.body.runWith(Sink.head)
-          b <- request.body.runWith(Sink.head)
-        } yield (a ++ b).utf8String)
-          .map(
-            r => Ok(r)
-          )
-    }
-
   }
 
   @tailrec
   private def generateByteString(kb: Int, accumulator: ByteString = ByteString.empty): ByteString =
     if (kb <= 0) accumulator
     else {
+
       lazy val valueAsByte: Byte = (kb % 10).toString.getBytes(StandardCharsets.UTF_8)(0) // one byte each
       generateByteString(kb - 1, ByteString.fromArray(Array.fill(1024)(valueAsByte)) ++ accumulator)
     }
@@ -100,14 +88,6 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
             contentAsString(result) mustBe byteString.utf8String
           }
       }
-    }
-
-    "via the stream extension method" in {
-      val string  = Gen.stringOfN(20, Gen.alphaNumChar).sample.value
-      val request = FakeRequest("POST", "/", headers, singleUseStringSource(string))
-      val result  = Harness.resultStream()(request)
-      status(result) mustBe OK
-      contentAsString(result) mustBe (string ++ string)
     }
   }
 

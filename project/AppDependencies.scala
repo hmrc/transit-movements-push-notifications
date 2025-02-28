@@ -2,9 +2,9 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapPlayVersion = "9.4.0"
+  private val bootstrapPlayVersion = "9.7.0"
   private val catsVersion          = "2.6.1"
-  private val mongoPlay = "2.2.0"
+  private val mongoPlay            = "2.2.0"
 
   val compile = Seq(
     "uk.gov.hmrc"       %% "bootstrap-backend-play-30"    % bootstrapPlayVersion,
@@ -15,14 +15,13 @@ object AppDependencies {
   )
 
   val test = Seq(
-    "org.apache.pekko" %% "pekko-testkit" % "1.0.3",
+    "org.apache.pekko"  %% "pekko-testkit"           % "1.0.3",
     "uk.gov.hmrc"       %% "bootstrap-test-play-30"  % bootstrapPlayVersion,
     "uk.gov.hmrc.mongo" %% "hmrc-mongo-test-play-30" % mongoPlay,
     "org.typelevel"     %% "cats-core"               % catsVersion,
     "org.apache.pekko"  %% "pekko-testkit"           % "1.0.2",
-    "org.mockito"       %% "mockito-scala-scalatest" % "1.17.14",
     "org.pegdown"        % "pegdown"                 % "1.6.0",
-    "org.scalatestplus" %% "mockito-3-2"             % "3.1.2.0",
+    "org.scalatestplus" %% "mockito-5-12"            % "3.2.19.0",
     "org.scalacheck"    %% "scalacheck"              % "1.16.0",
     "org.typelevel"     %% "discipline-scalatest"    % "2.1.5"
   ).map(_ % Test)

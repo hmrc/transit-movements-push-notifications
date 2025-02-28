@@ -70,7 +70,7 @@ object PresentationError extends CommonFormats with Logging {
     (
       (__ \ MessageFieldName).read[String] and
         (__ \ CodeFieldName).read[ErrorCode]
-    )(StandardError.apply _)
+    )(StandardError.apply)
 
 }
 

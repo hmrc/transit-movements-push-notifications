@@ -50,7 +50,7 @@ trait PushPullNotificationService {
     boxAssociation: BoxAssociation,
     contentLength: Long,
     messageId: MessageId,
-    body: Source[ByteString, _],
+    body: Source[ByteString, ?],
     notificationType: NotificationType,
     messageType: Option[MessageType]
   )(implicit
@@ -86,7 +86,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     boxAssociation: BoxAssociation,
     contentLength: Long,
     messageId: MessageId,
-    body: Source[ByteString, _],
+    body: Source[ByteString, ?],
     notificationType: NotificationType,
     messageType: Option[MessageType]
   )(implicit
