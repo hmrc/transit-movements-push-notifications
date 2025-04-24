@@ -20,6 +20,5 @@ object Constants {
 
   val BoxName                            = "customs/transits##2.0##notificationUrl"
   val BoxNameFinal                       = "customs/transits##2.1##notificationUrl"
-  val APIVersionHeaderKey: String        = "APIVersion"
   val APIVersionFinalHeaderValue: String = "final"
 }
