@@ -2,16 +2,16 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapPlayVersion = "9.7.0"
+  private val bootstrapPlayVersion = "9.11.0"
   private val catsVersion          = "2.6.1"
-  private val mongoPlay            = "2.2.0"
+  private val mongoPlay            = "2.6.0"
 
   val compile = Seq(
     "uk.gov.hmrc"       %% "bootstrap-backend-play-30"    % bootstrapPlayVersion,
     "uk.gov.hmrc.mongo" %% "hmrc-mongo-play-30"           % mongoPlay,
     "io.lemonlabs"      %% "scala-uri"                    % "4.0.2",
     "org.typelevel"     %% "cats-core"                    % catsVersion,
-    "uk.gov.hmrc"       %% "internal-auth-client-play-30" % "3.0.0"
+    "uk.gov.hmrc"       %% "internal-auth-client-play-30" % "3.1.0"
   )
 
   val test = Seq(
