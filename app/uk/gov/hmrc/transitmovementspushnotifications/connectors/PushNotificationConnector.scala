@@ -65,12 +65,8 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val query = hc.headers(Seq(APIVersionFinalHeaderValue)).headOption match {
-      case Some((header)) if header._2 == APIVersionFinalHeaderValue =>
-        QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
-      case _ =>
-        QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
-    }
+    val query = QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
+
     val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(query)
 
     httpClientV2
