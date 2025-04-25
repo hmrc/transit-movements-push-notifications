@@ -70,7 +70,6 @@ class PushNotificationConnectorSpec
       val boxId    = arbitraryBoxId.arbitrary.sample.get
       val clientId = "Client_123"
 
-
       "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON with BoxNameFinal" in {
         implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
 
@@ -78,8 +77,7 @@ class PushNotificationConnectorSpec
           get(urlPathEqualTo("/box")).willReturn(
             aResponse()
               .withStatus(OK)
-              .withBody(
-                s"""
+              .withBody(s"""
                 {
                   "boxId": "${boxId.value}",
                   "boxName":"${Constants.BoxNameFinal}",
@@ -131,7 +129,6 @@ class PushNotificationConnectorSpec
         }
 
       }
-
 
       "should return failed future when the pushPullNotification API returns 404" in {
         server.stubFor {
