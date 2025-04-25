@@ -67,7 +67,7 @@ class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpCli
 
     val query = hc.headers(Seq(APIVersionFinalHeaderValue)).headOption match {
       case Some((header)) if header._2 == APIVersionFinalHeaderValue =>
-        QueryString.fromPairs(("boxName", Constants.BoxNameFinal), ("clientId", clientId))
+        QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
       case _ =>
         QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
     }

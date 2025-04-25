@@ -80,7 +80,7 @@ class PushNotificationConnectorSpec
               .withBody(s"""
                 {
                   "boxId": "${boxId.value}",
-                  "boxName":"${Constants.BoxNameFinal}",
+                  "boxName":"${Constants.BoxName}",
                   "boxCreator":{
                       "clientId": "$clientId"
                   }
