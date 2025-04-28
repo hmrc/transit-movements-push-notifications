@@ -26,13 +26,16 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 import play.api.Logging
 import play.api.http.HeaderNames
+import play.api.http.Status.UNSUPPORTED_MEDIA_TYPE
 import play.api.mvc.Action
 import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.ControllerComponents
+import play.api.mvc.Result
 import play.api.test.DefaultAwaitTimeout
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsString
+import play.api.test.Helpers.status
 import play.api.test.Helpers.stubControllerComponents
 import uk.gov.hmrc.http.HttpVerbs.POST
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -99,6 +102,25 @@ class ContentTypeRoutingSpec
       contentAsString(result) mustBe "Two"
     }
 
+  }
+
+  "with an unsupported content-type header should return 415 and the correct JSON error" in {
+    val cc  = stubControllerComponents()
+    val sut = new Harness(cc)
+
+    val routes: PartialFunction[Option[String], Action[?]] = {
+      case Some("application/xml") => sut.contentActionOne
+      case None                    => sut.contentActionTwo
+    }
+    val action = sut.contentTypeRoute(routes)
+
+    val headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> "application/json"))
+    val request = FakeRequest(POST, "/", headers, generateSource("""{"foo":"bar"}"""))
+
+    val result = action(request)
+
+    status(result) mustBe UNSUPPORTED_MEDIA_TYPE
+    contentAsString(result) must include("Content-type header application/json is not supported")
   }
 
 }

@@ -41,7 +41,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
@@ -71,7 +70,9 @@ class PushNotificationConnectorSpec
       val boxId    = arbitraryBoxId.arbitrary.sample.get
       val clientId = "Client_123"
 
-      "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON" in {
+      "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON with BoxNameFinal" in {
+        implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
+
         server.stubFor {
           get(urlPathEqualTo("/box")).willReturn(
             aResponse()
@@ -100,8 +101,7 @@ class PushNotificationConnectorSpec
 
       }
 
-      "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON with BoxNameFinal" in {
-        implicit val headerCarrier: HeaderCarrier = HeaderCarrier(otherHeaders = Seq(APIVersionHeaderKey -> APIVersionFinalHeaderValue))
+      "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON" in {
         server.stubFor {
           get(urlPathEqualTo("/box")).willReturn(
             aResponse()
@@ -109,7 +109,7 @@ class PushNotificationConnectorSpec
               .withBody(s"""
                 {
                   "boxId": "${boxId.value}",
-                  "boxName":"${Constants.BoxNameFinal}",
+                  "boxName":"${Constants.BoxName}",
                   "boxCreator":{
                       "clientId": "$clientId"
                   }

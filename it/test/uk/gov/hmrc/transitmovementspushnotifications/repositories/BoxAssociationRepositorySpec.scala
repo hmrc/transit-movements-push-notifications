@@ -132,7 +132,7 @@ class BoxAssociationRepositorySpec
     originalAssociation =>
       val eitherResult = for {
         _ <- repository.insert(originalAssociation)
-        _ = repository.update(originalAssociation._id)
+        _ <- repository.update(originalAssociation._id)
         afterUpdate <- repository.getBoxAssociation(originalAssociation._id)
       } yield afterUpdate
 

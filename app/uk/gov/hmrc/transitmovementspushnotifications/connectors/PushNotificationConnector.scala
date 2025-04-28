@@ -21,20 +21,18 @@ import io.lemonlabs.uri.QueryString
 import play.api.http.Status._
 import play.api.http._
 import play.api.libs.json.Json
-import play.api.libs.ws.DefaultBodyWritables
-import play.api.libs.ws.JsonBodyWritables
-import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
+import play.api.libs.ws.WSBodyWritables.writeableOf_JsValue
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -60,23 +58,15 @@ trait PushPullNotificationConnector {
 
 }
 
-class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2)
-    extends PushPullNotificationConnector
-    with BaseConnector
-    with DefaultBodyWritables
-    with JsonBodyWritables {
+class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2) extends PushPullNotificationConnector with BaseConnector {
 
   override def getBox(clientId: String)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val query = hc.headers(Seq(APIVersionHeaderKey)).headOption match {
-      case Some(header) if header._2 == APIVersionFinalHeaderValue =>
-        QueryString.fromPairs(("boxName", Constants.BoxNameFinal), ("clientId", clientId))
-      case _ =>
-        QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
-    }
+    val query = QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
+
     val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(query)
 
     httpClientV2
