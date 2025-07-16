@@ -2,7 +2,7 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapPlayVersion = "9.11.0"
+  private val bootstrapPlayVersion = "9.16.0"
   private val catsVersion          = "2.6.1"
   private val mongoPlay            = "2.6.0"
 
@@ -20,7 +20,6 @@ object AppDependencies {
     "uk.gov.hmrc.mongo" %% "hmrc-mongo-test-play-30" % mongoPlay,
     "org.typelevel"     %% "cats-core"               % catsVersion,
     "org.apache.pekko"  %% "pekko-testkit"           % "1.0.2",
-    "org.pegdown"        % "pegdown"                 % "1.6.0",
     "org.scalatestplus" %% "mockito-5-12"            % "3.2.19.0",
     "org.scalacheck"    %% "scalacheck"              % "1.16.0",
     "org.typelevel"     %% "discipline-scalatest"    % "2.1.5"
