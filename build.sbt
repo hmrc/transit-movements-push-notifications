@@ -21,7 +21,6 @@ lazy val microservice = Project("transit-movements-push-notifications", file("."
       "uk.gov.hmrc.transitmovementspushnotifications.models.Bindings._"
     )
   )
-  .settings(resolvers += Resolver.jcenterRepo)
   .settings(scoverageSettings)
   .settings(inThisBuild(buildSettings))
 

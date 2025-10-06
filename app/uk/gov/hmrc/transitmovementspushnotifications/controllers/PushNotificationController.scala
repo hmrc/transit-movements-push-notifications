@@ -144,7 +144,7 @@ class PushNotificationController @Inject() (
     body
       .validate[BoxAssociationRequest] match {
       case JsSuccess(boxAssociation, _) => EitherT.rightT[Future, PresentationError](boxAssociation)
-      case _ =>
+      case _                            =>
         EitherT.leftT[Future, BoxAssociationRequest](
           PresentationError.badRequestError("Expected clientId, movementType and enrollmentEORINumber to be present in the body")
         )

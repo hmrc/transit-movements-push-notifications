@@ -40,13 +40,12 @@ class NotificationTypeSpec extends AnyFreeSpec with Matchers with ScalaCheckDriv
     }
   }
 
-  "NotificationType writes" - {
+  "NotificationType writes" -
     NotificationType.values.foreach {
       notificationType =>
         s"should write a JsString of $notificationType from a valid notification type" in {
           NotificationType.notificationTypeWrites.writes(notificationType) mustBe JsString(notificationType.toString)
         }
     }
-  }
 
 }

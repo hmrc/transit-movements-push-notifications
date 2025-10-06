@@ -40,7 +40,7 @@ class MongoFormatsSpec extends AnyFreeSpec with Matchers with ModelGenerators wi
   }
 
   "An OffsetDateTime can be constructed when returned from Mongo" in {
-    val long = Gen.chooseNum(0L, Long.MaxValue).sample.value
+    val long                = Gen.chooseNum(0L, Long.MaxValue).sample.value
     val mongoDateTimeFormat = Json.obj(
       "$date" -> Json.obj(
         "$numberLong" -> long.toString
@@ -59,7 +59,7 @@ class MongoFormatsSpec extends AnyFreeSpec with Matchers with ModelGenerators wi
       "boxId"                -> boxAssociation.boxId.value,
       "movementType"         -> boxAssociation.movementType,
       "enrollmentEORINumber" -> boxAssociation.enrollmentEORINumber.get, // as per the arbitrary, this will always exist
-      "updated" -> Json.obj(
+      "updated"              -> Json.obj(
         "$date" -> Json.obj(
           "$numberLong" -> boxAssociation.updated.toInstant.toEpochMilli.toString
         )

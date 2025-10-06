@@ -131,8 +131,8 @@ class BoxAssociationRepositorySpec
   it should "return a Unit if it updates the timestamp of a movement that exists" in forAll(arbitrary[BoxAssociation]) {
     originalAssociation =>
       val eitherResult = for {
-        _ <- repository.insert(originalAssociation)
-        _ <- repository.update(originalAssociation._id)
+        _           <- repository.insert(originalAssociation)
+        _           <- repository.update(originalAssociation._id)
         afterUpdate <- repository.getBoxAssociation(originalAssociation._id)
       } yield afterUpdate
 
@@ -161,7 +161,7 @@ class BoxAssociationRepositorySpec
 
   "getBoxAssociation" should "return a DocumentNotFound error for a movementId that is not in the database" in {
     val unknownMovementId = MovementId("Unknown Movement Id")
-    val result = await(
+    val result            = await(
       repository.getBoxAssociation(unknownMovementId).value
     )
 
