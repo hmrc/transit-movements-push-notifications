@@ -29,7 +29,6 @@ import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
 import uk.gov.hmrc.transitmovementspushnotifications.models._
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import play.api.libs.ws.WSBodyWritables.writeableOf_JsValue
