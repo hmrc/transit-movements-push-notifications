@@ -21,7 +21,6 @@ import com.google.inject.ImplementedBy
 import com.mongodb.client.model.Filters.{eq => mEq}
 import com.mongodb.client.model.Updates.{set => mSet}
 import org.apache.pekko.pattern.retry
-import org.mongodb.scala.SingleObservableFuture
 import org.mongodb.scala.model._
 import play.api.Logging
 import uk.gov.hmrc.mongo.MongoComponent

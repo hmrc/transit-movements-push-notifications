@@ -96,7 +96,7 @@ class BaseConnectorSpec extends SpecBase {
         .recover {
           case UpstreamErrorResponse(`expected`, INTERNAL_SERVER_ERROR, _, _) => // success
           case x: TestFailedException                                         => x
-          case thr =>
+          case thr                                                            =>
             fail(s"Test failed in an unexpected way: $thr")
         }
 

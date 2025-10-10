@@ -77,7 +77,7 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
     Source(byteString.grouped(1024).toSeq)
 
   "Streaming" - {
-    "from Memory" - {
+    "from Memory" -
       (1 to 5).foreach {
         value =>
           s"~$value kb string is created" in {
@@ -88,7 +88,6 @@ class StreamingParsersSpec extends AnyFreeSpec with Matchers with TestActorSyste
             contentAsString(result) mustBe byteString.utf8String
           }
       }
-    }
   }
 
 }

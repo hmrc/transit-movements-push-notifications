@@ -273,7 +273,7 @@ class PushNotificationConnectorSpec
         ) {
           (boxId, messageId, movementId, body, messageType, movementType) =>
             // forAll only suppoorts six entries, so we need to do other arbitraries like this
-            val enrollmentEori = arbitrary[EORINumber].sample.get
+            val enrollmentEori              = arbitrary[EORINumber].sample.get
             val messageNotificationWithBody = MessageReceivedNotification(
               messageUri = s"/customs/transits/movements/departures/${movementId.value}/messages/${messageId.value}",
               movementId = movementId,

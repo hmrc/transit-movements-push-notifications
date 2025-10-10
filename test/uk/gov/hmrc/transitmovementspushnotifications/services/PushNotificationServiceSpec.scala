@@ -149,10 +149,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
 
   "sendPushNotification" - {
 
-    val sampleString = "<ncts:CC007C PhaseID=\"NCTS5.0\" xmlns:ncts=\"http://ncts.dgtaxud.ec\">some payload</ncts:CC007C>)"
+    val sampleString  = "<ncts:CC007C PhaseID=\"NCTS5.0\" xmlns:ncts=\"http://ncts.dgtaxud.ec\">some payload</ncts:CC007C>)"
     val validJSONBody = Json.toJson(
       Json.obj(
-        "code" -> "SUCCESS",
+        "code"    -> "SUCCESS",
         "message" ->
           s"The message for movement was successfully processed"
       )
@@ -167,7 +167,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-          val (notification, source) = {
+          val (notification, source) =
             if (notificationType == NotificationType.MESSAGE_RECEIVED) {
               (
                 MessageReceivedNotification(
@@ -196,7 +196,6 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               )
 
             }
-          }
 
           when(
             mockPushPullNotificationConnector
@@ -229,7 +228,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
-          val (notification, source) = {
+          val (notification, source) =
             if (notificationType == NotificationType.MESSAGE_RECEIVED) {
               (
                 MessageReceivedNotification(
@@ -258,7 +257,6 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               )
 
             }
-          }
 
           when(
             mockPushPullNotificationConnector
@@ -328,7 +326,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         Gen.option(arbitrary[MessageType])
       ) {
         (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
-          val (notification, source) = {
+          val (notification, source) =
             if (notificationType == NotificationType.MESSAGE_RECEIVED) {
               (
                 MessageReceivedNotification(
@@ -357,7 +355,6 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               )
 
             }
-          }
 
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
@@ -387,7 +384,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         Gen.option(arbitrary[MessageType])
       ) {
         (boxAssociation, messageId, notificationType, messageTypeMaybe) =>
-          val (notification, source) = {
+          val (notification, source) =
             if (notificationType == NotificationType.MESSAGE_RECEIVED) {
               (
                 MessageReceivedNotification(
@@ -416,7 +413,6 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
               )
 
             }
-          }
           when(mockAppConfig.maxPushPullPayloadSize).thenReturn(maxPayloadSize)
 
           val errorResponse = UpstreamErrorResponse(boxAssociation.boxId.toString, BAD_REQUEST)

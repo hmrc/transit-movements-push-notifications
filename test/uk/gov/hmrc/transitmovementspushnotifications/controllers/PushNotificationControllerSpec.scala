@@ -463,7 +463,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
 
     val validJSONBody = Json.toJson(
       Json.obj(
-        "code" -> "SUCCESS",
+        "code"    -> "SUCCESS",
         "message" ->
           s"The message for movement was successfully processed"
       )
@@ -759,7 +759,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
               eqTo(notificationType),
               eqTo(messageTypeMaybe)
             )(any[ExecutionContext], any[HeaderCarrier], any[Materializer])
-          ).thenReturn((EitherT.liftF(Future.unit)))
+          ).thenReturn(EitherT.liftF(Future.unit))
 
           val result =
             controller.postNotification(boxAssociation._id, messageId, notificationType)(

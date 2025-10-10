@@ -39,7 +39,7 @@ class NotificationSpec extends AnyFreeSpec with Matchers with ScalaCheckDrivenPr
     (messageUri, messageBody, movementId, messageId, messageType, movementType) =>
       // We can only have six entries for forAll, so we have to manually add our seventh here
       val enrollmentEORINumberMaybe = Gen.option(arbitrary[EORINumber]).sample.get
-      val actual = Notification.notificationWrites.writes(
+      val actual                    = Notification.notificationWrites.writes(
         MessageReceivedNotification(
           messageUri,
           messageId,

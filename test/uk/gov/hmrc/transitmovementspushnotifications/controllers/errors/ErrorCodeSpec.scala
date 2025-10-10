@@ -22,7 +22,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 
 class ErrorCodeSpec extends SpecBase {
 
-  "writes" in {
+  "writes" in
     ErrorCode.errorCodes.foreach {
       errorCode =>
         val json = JsString(errorCode.code)
@@ -32,5 +32,4 @@ class ErrorCodeSpec extends SpecBase {
           case _                  => fail("failed to match error code")
         }
     }
-  }
 }

@@ -116,7 +116,7 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
         .map(createNotification)
         .flatMap(pushPullNotificationConnector.postNotification(boxAssociation.boxId, _))
         .map {
-          case Right(_) => Right(())
+          case Right(_)    => Right(())
           case Left(error) =>
             error.statusCode match {
               case NOT_FOUND =>
