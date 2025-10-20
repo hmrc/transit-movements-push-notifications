@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalatest.OptionValues
@@ -41,8 +41,9 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
+import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.*
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.utils.GuiceWiremockSuite
 
@@ -71,22 +72,24 @@ class PushNotificationConnectorSpec
       val clientId = "Client_123"
 
       "should return a BoxResponse when the pushPullNotification API returns 200 and valid JSON with BoxNameFinal" in {
-        implicit val headerCarrier: HeaderCarrier = HeaderCarrier()
-
+        implicit val headerCarrier: HeaderCarrier = HeaderCarrier(otherHeaders = Seq(APIVersionHeaderKey -> APIVersionFinalHeaderValue))
         server.stubFor {
-          get(urlPathEqualTo("/box")).willReturn(
-            aResponse()
-              .withStatus(OK)
-              .withBody(s"""
+          get(urlPathEqualTo("/box"))
+            .withQueryParam("boxName", equalTo(Constants.BoxNameFinal))
+            .withQueryParam("clientId", equalTo(clientId))
+            .willReturn(
+              aResponse()
+                .withStatus(OK)
+                .withBody(s"""
                 {
                   "boxId": "${boxId.value}",
-                  "boxName":"${Constants.BoxName}",
+                  "boxName":"${Constants.BoxNameFinal}",
                   "boxCreator":{
                       "clientId": "$clientId"
                   }
                 }
               """)
-          )
+            )
         }
 
         val app = applicationBuilder.build()
@@ -96,6 +99,12 @@ class PushNotificationConnectorSpec
           whenReady(connector.getBox(clientId)) {
             result =>
               result mustEqual BoxResponse(boxId)
+
+              server.verify(
+                getRequestedFor(urlPathEqualTo("/box"))
+                  .withQueryParam("boxName", equalTo(Constants.BoxNameFinal))
+                  .withQueryParam("clientId", equalTo(clientId))
+              )
           }
         }
 
@@ -125,6 +134,12 @@ class PushNotificationConnectorSpec
           whenReady(connector.getBox(clientId)) {
             result =>
               result mustEqual BoxResponse(boxId)
+
+              server.verify(
+                getRequestedFor(urlPathEqualTo("/box"))
+                  .withQueryParam("boxName", equalTo(Constants.BoxName))
+                  .withQueryParam("clientId", equalTo(clientId))
+              )
           }
         }
 

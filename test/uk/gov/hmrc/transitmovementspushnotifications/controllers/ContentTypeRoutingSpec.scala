@@ -30,7 +30,6 @@ import play.api.http.Status.UNSUPPORTED_MEDIA_TYPE
 import play.api.mvc.Action
 import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.ControllerComponents
-import play.api.mvc.Result
 import play.api.test.DefaultAwaitTimeout
 import play.api.test.FakeHeaders
 import play.api.test.FakeRequest
