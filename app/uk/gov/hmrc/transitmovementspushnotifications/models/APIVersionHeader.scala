@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.models
 
-object Constants {
-  val BoxNameV2_1                 = "customs/transits##2.1##notificationUrl"
-  val BoxNameV3_0                 = "customs/transits##3.0##notificationUrl"
-  val APIVersionHeaderKey: String = "APIVersion"
+enum APIVersionHeader(val value: String, val path: String) {
+  case V2_1 extends APIVersionHeader("2.1", "v2_1")
+  case V3_0 extends APIVersionHeader("3.0", "v3_0")
+}
+
+object APIVersionHeader {
+  def fromString(value: String): Option[APIVersionHeader] =
+    values.find(_.value == value)
 }

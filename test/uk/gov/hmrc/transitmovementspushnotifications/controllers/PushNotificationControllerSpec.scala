@@ -22,7 +22,7 @@ import org.apache.pekko.util.ByteString
 import org.apache.pekko.util.Timeout
 import cats.data.EitherT
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.{eq => eqTo}
+import org.mockito.ArgumentMatchers.eq as eqTo
 import org.mockito.Mockito.reset
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -30,7 +30,7 @@ import org.mockito.Mockito.when
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.http.HeaderNames
 import play.api.http.MimeTypes
 import play.api.libs.Files.SingletonTemporaryFileCreator
@@ -42,7 +42,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.OWrites
 import play.api.libs.json.__
-import play.api.mvc._
+import play.api.mvc.*
 import play.api.test.Helpers.contentAsJson
 import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.status
@@ -60,9 +60,12 @@ import uk.gov.hmrc.internalauth.client.ResourceType
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.InternalAuthActionProvider
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.ValidateAcceptRefiner
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.*
+import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V2_1
+import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V3_0
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.InsertNotAcknowledged
@@ -87,6 +90,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   val mockMovementBoxAssociationFactory: BoxAssociationFactory       = mock[BoxAssociationFactory]
   val mockInternalAuthActionProvider: InternalAuthActionProvider     = mock[InternalAuthActionProvider]
 
+  val versionHeader: APIVersionHeader = Gen.oneOf(V2_1, V3_0).sample.value
+
   def fakeRequest(
     movementId: MovementId,
     method: String,
@@ -95,7 +100,12 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     FakeRequest(
       method = method,
       uri = routes.PushNotificationController.createBoxAssociation(movementId).url,
-      headers = FakeHeaders(Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON)),
+      headers = FakeHeaders(
+        Seq(
+          HeaderNames.CONTENT_TYPE -> MimeTypes.JSON,
+          "APIVersion"             -> s"${versionHeader.value}"
+        )
+      ),
       body = body
     )
 
@@ -119,7 +129,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
       mockPushPullNotificationService,
       mockMovementBoxAssociationRepository,
       mockMovementBoxAssociationFactory,
-      mockInternalAuthActionProvider
+      mockInternalAuthActionProvider,
+      new ValidateAcceptRefiner(stubControllerComponents())
     )
 
   private val notificationPermission = Predicate.Permission(
@@ -185,7 +196,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ) {
       (boxAssociation, body) =>
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         when(
@@ -221,7 +232,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ) {
       (boxAssociation, body) =>
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
@@ -255,7 +266,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
         val body = excludeFields(Json.toJsObject(validBody), fieldsToExclude)
 
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         val request = fakeRequest(boxAssociation._id, POST, body)
@@ -279,7 +290,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ) {
       (boxAssociation, body) =>
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT[Future, BoxId](PushPullNotificationError.BoxNotFound(BoxId("test"))))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
@@ -299,7 +310,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ) {
       (boxAssociation, body) =>
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT[Future, BoxId](PushPullNotificationError.DefaultBoxNotFound))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
@@ -339,7 +350,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ) {
       (boxAssociation, body) =>
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.leftT[Future, BoxId](PushPullNotificationError.UnexpectedError(Some(new Exception("error")))))
 
         val request = fakeRequest(boxAssociation._id, POST, Json.toJson(body))
@@ -363,7 +374,7 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
     ) {
       (boxAssociation, body) =>
         resetInternalAuth()
-        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationService.getBoxId(any[BoxAssociationRequest], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(EitherT.rightT[Future, BoxId](boxAssociation.boxId))
 
         when(

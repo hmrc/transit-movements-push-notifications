@@ -32,8 +32,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
 import uk.gov.hmrc.transitmovementspushnotifications.models.*
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import play.api.libs.ws.WSBodyWritables.writeableOf_JsValue
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionFinalHeaderValue
-import uk.gov.hmrc.transitmovementspushnotifications.config.Constants.APIVersionHeaderKey
+import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V3_0
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -42,7 +41,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[PushPullNotificationConnectorImpl])
 trait PushPullNotificationConnector {
 
-  def getBox(clientId: String)(implicit
+  def getBox(clientId: String, apiVersion: APIVersionHeader)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[BoxResponse]
@@ -61,16 +60,14 @@ trait PushPullNotificationConnector {
 
 class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2) extends PushPullNotificationConnector with BaseConnector {
 
-  override def getBox(clientId: String)(implicit
+  override def getBox(clientId: String, apiVersion: APIVersionHeader)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val query = hc.headers(Seq(APIVersionHeaderKey)).headOption match {
-      case Some(header) if header._2 == APIVersionFinalHeaderValue =>
-        QueryString.fromPairs(("boxName", Constants.BoxNameFinal), ("clientId", clientId))
-      case _ =>
-        QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
+    val query = apiVersion match {
+      case V3_0 => QueryString.fromPairs(("boxName", Constants.BoxNameV3_0), ("clientId", clientId))
+      case _    => QueryString.fromPairs(("boxName", Constants.BoxNameV2_1), ("clientId", clientId))
     }
 
     val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(query)

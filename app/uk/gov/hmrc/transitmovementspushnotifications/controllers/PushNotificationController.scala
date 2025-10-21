@@ -26,7 +26,7 @@ import play.api.http.MimeTypes
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.internalauth.client.IAAction
 import uk.gov.hmrc.internalauth.client.Predicate
 import uk.gov.hmrc.internalauth.client.Resource
@@ -34,13 +34,14 @@ import uk.gov.hmrc.internalauth.client.ResourceLocation
 import uk.gov.hmrc.internalauth.client.ResourceType
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.InternalAuthActionProvider
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.ValidateAcceptRefiner
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.stream.StreamingParsers
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageId
 import uk.gov.hmrc.transitmovementspushnotifications.models.MessageType
 import uk.gov.hmrc.transitmovementspushnotifications.models.MovementId
 import uk.gov.hmrc.transitmovementspushnotifications.models.NotificationType
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ConvertError
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import uk.gov.hmrc.transitmovementspushnotifications.repositories.BoxAssociationRepository
@@ -58,7 +59,8 @@ class PushNotificationController @Inject() (
   pushPullNotificationService: PushPullNotificationService,
   boxAssociationRepository: BoxAssociationRepository,
   boxAssociationFactory: BoxAssociationFactory,
-  internalAuth: InternalAuthActionProvider
+  internalAuth: InternalAuthActionProvider,
+  validateAcceptRefiner: ValidateAcceptRefiner
 )(implicit
   val materializer: Materializer,
   ec: ExecutionContext
@@ -127,11 +129,11 @@ class PushNotificationController @Inject() (
       )
   }
 
-  def createBoxAssociation(movementId: MovementId): Action[JsValue] = internalAuth(associatePermission).async(parse.json) {
+  def createBoxAssociation(movementId: MovementId): Action[JsValue] = (internalAuth(associatePermission) andThen validateAcceptRefiner).async(parse.json) {
     implicit request =>
       (for {
         boxAssociation <- getBoxAssociationRequest(request.body)
-        boxId          <- pushPullNotificationService.getBoxId(boxAssociation).asPresentation
+        boxId          <- pushPullNotificationService.getBoxId(boxAssociation, request.versionHeader).asPresentation
         movementBoxAssociation = boxAssociationFactory.create(boxId, movementId, boxAssociation.movementType, boxAssociation.enrollmentEORINumber)
         result <- boxAssociationRepository.insert(movementBoxAssociation).asPresentation
       } yield result).fold[Result](

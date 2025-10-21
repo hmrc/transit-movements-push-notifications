@@ -29,8 +29,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ConvertError
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
@@ -43,7 +43,8 @@ import scala.util.control.NonFatal
 trait PushPullNotificationService {
 
   def getBoxId(
-    boxAssociationRequest: BoxAssociationRequest
+    boxAssociationRequest: BoxAssociationRequest,
+    apiVersion: APIVersionHeader
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId]
 
   def sendPushNotification(
@@ -75,11 +76,12 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
   }
 
   override def getBoxId(
-    boxAssociationRequest: BoxAssociationRequest
+    boxAssociationRequest: BoxAssociationRequest,
+    apiVersion: APIVersionHeader
   )(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
     boxAssociationRequest match {
       case BoxAssociationRequestBoxAndClient(clientId, Some(boxId)) => checkBoxIdExists(clientId, boxId)
-      case BoxAssociationRequestBoxAndClient(clientId, None)        => getDefaultBoxId(clientId)
+      case BoxAssociationRequestBoxAndClient(clientId, None)        => getDefaultBoxId(clientId, apiVersion)
     }
 
   override def sendPushNotification(
@@ -131,10 +133,13 @@ class PushPullNotificationServiceImpl @Inject() (pushPullNotificationConnector: 
     )
   }
 
-  private def getDefaultBoxId(clientId: String)(implicit ec: ExecutionContext, hc: HeaderCarrier): EitherT[Future, PushPullNotificationError, BoxId] =
+  private def getDefaultBoxId(clientId: String, apiVersion: APIVersionHeader)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): EitherT[Future, PushPullNotificationError, BoxId] =
     EitherT(
       pushPullNotificationConnector
-        .getBox(clientId)
+        .getBox(clientId, apiVersion)
         .map {
           boxResponse => Right(boxResponse.boxId)
         }
