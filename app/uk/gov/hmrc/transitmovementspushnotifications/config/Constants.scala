@@ -17,7 +17,6 @@
 package uk.gov.hmrc.transitmovementspushnotifications.config
 
 object Constants {
-  val BoxNameV2_1                 = "customs/transits##2.1##notificationUrl"
-  val BoxNameV3_0                 = "customs/transits##3.0##notificationUrl"
-  val APIVersionHeaderKey: String = "APIVersion"
+  val BoxNameV2_1 = "customs/transits##2.1##notificationUrl"
+  val BoxNameV3_0 = "customs/transits##3.0##notificationUrl"
 }

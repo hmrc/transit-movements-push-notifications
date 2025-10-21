@@ -24,11 +24,6 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ErrorCode.InternalServerError
 import uk.gov.hmrc.transitmovementspushnotifications.models.errors.HeaderExtractError.NoHeaderFound
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ConvertError
-import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ErrorCode
-import uk.gov.hmrc.transitmovementspushnotifications.models.errors.HeaderExtractError
-import uk.gov.hmrc.transitmovementspushnotifications.models.errors.InternalServiceError
-import uk.gov.hmrc.transitmovementspushnotifications.models.errors.StandardError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.*
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.*
 

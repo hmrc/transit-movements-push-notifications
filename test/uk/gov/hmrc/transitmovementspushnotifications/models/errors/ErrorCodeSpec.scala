@@ -19,7 +19,6 @@ package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
-import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ErrorCode
 
 class ErrorCodeSpec extends SpecBase {
 

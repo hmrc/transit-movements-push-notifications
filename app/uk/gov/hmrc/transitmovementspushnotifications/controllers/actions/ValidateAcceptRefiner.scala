@@ -47,15 +47,15 @@ final class ValidateAcceptRefiner @Inject() (cc: ControllerComponents)(implicit 
 
   private def validateAcceptHeader(request: Request[?]): Either[PresentationError, APIVersionHeader] =
     for {
-      acceptHeaderValue <-
+      apiVersionHeaderValue <-
         request.headers
           .get("APIVersion")
-          .toRight(PresentationError.notAcceptableError("An Accept Header is missing."))
+          .toRight(PresentationError.notAcceptableError("An APIVersion header is missing."))
 
       version <-
         APIVersionHeader
-          .fromString(acceptHeaderValue)
-          .toRight(PresentationError.unsupportedMediaTypeError(s"The Accept header $acceptHeaderValue is not supported."))
+          .fromString(apiVersionHeaderValue)
+          .toRight(PresentationError.unsupportedMediaTypeError(s"The APIVersion header $apiVersionHeaderValue is not supported."))
     } yield version
 
   def refine[A](request: Request[A]): Future[Either[Result, ValidatedVersionRequest[A]]] =

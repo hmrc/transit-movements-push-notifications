@@ -61,6 +61,7 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
 import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.InternalAuthActionProvider
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.ValidateAcceptRefiner
+import uk.gov.hmrc.transitmovementspushnotifications.controllers.actions.ValidatedVersionRequest
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
 import uk.gov.hmrc.transitmovementspushnotifications.models.*
 import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V2_1
@@ -91,6 +92,8 @@ class PushNotificationControllerSpec extends SpecBase with ModelGenerators with 
   val mockInternalAuthActionProvider: InternalAuthActionProvider     = mock[InternalAuthActionProvider]
 
   val versionHeader: APIVersionHeader = Gen.oneOf(V2_1, V3_0).sample.value
+
+  val movementId: MovementId = arbitrary[MovementId].sample.value
 
   def fakeRequest(
     movementId: MovementId,
