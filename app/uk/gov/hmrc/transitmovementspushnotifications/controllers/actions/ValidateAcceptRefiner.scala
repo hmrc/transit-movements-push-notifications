@@ -17,8 +17,6 @@
 package uk.gov.hmrc.transitmovementspushnotifications.controllers.actions
 
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.Sink
-import org.apache.pekko.stream.scaladsl.Source
 import play.api.libs.json.Json
 import play.api.mvc.Results.Status
 import play.api.mvc.ActionBuilder
@@ -61,16 +59,9 @@ final class ValidateAcceptRefiner @Inject() (cc: ControllerComponents)(implicit 
   def refine[A](request: Request[A]): Future[Either[Result, ValidatedVersionRequest[A]]] =
     validateAcceptHeader(request) match {
       case Left(error) =>
-        clearSource(request)
         Future.successful(Left(Status(error.code.statusCode)(Json.toJson(error))))
       case Right(versionHeader) =>
         Future.successful(Right(ValidatedVersionRequest(versionHeader, request)))
-    }
-
-  private def clearSource(request: Request[?]): Unit =
-    request.body match {
-      case source: Source[_, _] => val _ = source.runWith(Sink.ignore)
-      case _                    => ()
     }
 
   override def parser: BodyParser[AnyContent] = cc.parsers.defaultBodyParser
