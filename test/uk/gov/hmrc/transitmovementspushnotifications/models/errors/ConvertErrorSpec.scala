@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
-import cats.syntax.all._
+import cats.syntax.all.*
 import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
 import org.scalatest.time.Span
 import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.ErrorCode.InternalServerError
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.ErrorCode.InternalServerError
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.HeaderExtractError.NoHeaderFound
 import uk.gov.hmrc.transitmovementspushnotifications.models.BoxId
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError._
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError.*
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.*
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

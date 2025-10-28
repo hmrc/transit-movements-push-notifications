@@ -14,22 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
-import play.api.libs.json.JsString
-import play.api.libs.json.JsSuccess
-import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
+sealed abstract class HeaderExtractError
 
-class ErrorCodeSpec extends SpecBase {
-
-  "writes" in
-    ErrorCode.errorCodes.foreach {
-      errorCode =>
-        val json = JsString(errorCode.code)
-
-        json.validate[ErrorCode] match {
-          case JsSuccess(code, _) => code mustBe errorCode
-          case _                  => fail("failed to match error code")
-        }
-    }
+object HeaderExtractError {
+  case class NoHeaderFound(element: String) extends HeaderExtractError
 }

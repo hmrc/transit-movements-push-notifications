@@ -19,7 +19,7 @@ package uk.gov.hmrc.transitmovementspushnotifications.services
 import org.apache.pekko.stream.scaladsl.Source
 import org.apache.pekko.util.ByteString
 import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.{eq => eqTo}
+import org.mockito.ArgumentMatchers.eq as eqTo
 import org.mockito.Mockito.when
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Gen
@@ -36,10 +36,12 @@ import uk.gov.hmrc.transitmovementspushnotifications.base.TestActorSystem
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.connectors.PushPullNotificationConnector
 import uk.gov.hmrc.transitmovementspushnotifications.generators.ModelGenerators
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.*
+import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V2_1
+import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V3_0
 import uk.gov.hmrc.transitmovementspushnotifications.models.request.BoxAssociationRequest
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
-import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._
+import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError.*
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.ExecutionContext
@@ -50,6 +52,8 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
   val maxPayloadSize                    = 80000
   val mockPushPullNotificationConnector = mock[PushPullNotificationConnector]
   private val mockAppConfig             = mock[AppConfig]
+
+  val version: APIVersionHeader = Gen.oneOf(V2_1, V3_0).sample.value
 
   implicit val ec: ExecutionContext = materializer.executionContext
   implicit val hc: HeaderCarrier    = HeaderCarrier()
@@ -66,10 +70,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
       arbitrary[BoxResponse]
     ) {
       (boxAssociationRequest, boxResponse) =>
-        when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationConnector.getBox(any[String], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.successful(boxResponse))
 
-        val result = sut.getBoxId(boxAssociationRequest)
+        val result = sut.getBoxId(boxAssociationRequest, version)
 
         whenReady(result.value) {
           _ mustBe Right(boxResponse.boxId)
@@ -83,10 +87,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     ) {
       boxAssociationRequest =>
         val exception = UpstreamErrorResponse("error", NOT_FOUND)
-        when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationConnector.getBox(any[String], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.failed(exception))
 
-        val result = sut.getBoxId(boxAssociationRequest)
+        val result = sut.getBoxId(boxAssociationRequest, version)
 
         whenReady(result.value) {
           _ mustBe Left(DefaultBoxNotFound)
@@ -100,10 +104,10 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
     ) {
       boxAssociationRequest =>
         val exception = UpstreamErrorResponse("error", INTERNAL_SERVER_ERROR)
-        when(mockPushPullNotificationConnector.getBox(any[String])(any[ExecutionContext], any[HeaderCarrier]))
+        when(mockPushPullNotificationConnector.getBox(any[String], any[APIVersionHeader])(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.failed(exception))
 
-        val result = sut.getBoxId(boxAssociationRequest)
+        val result = sut.getBoxId(boxAssociationRequest, version)
 
         whenReady(result.value) {
           _ mustBe Left(UnexpectedError(Some(exception)))
@@ -121,7 +125,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.successful(response))
 
-        val result = sut.getBoxId(boxAssociationRequestWithBoxId)
+        val result = sut.getBoxId(boxAssociationRequestWithBoxId, version)
 
         whenReady(result.value) {
           _ mustBe Right(boxId)
@@ -139,7 +143,7 @@ class PushNotificationServiceSpec extends SpecBase with ModelGenerators with Tes
         when(mockPushPullNotificationConnector.getAllBoxes(any[ExecutionContext], any[HeaderCarrier]))
           .thenReturn(Future.successful(boxResponse))
 
-        val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId)
+        val result = sut.getBoxId(boxAssociationRequestWithInvalidBoxId, version)
 
         whenReady(result.value) {
           _ mustBe Left(BoxNotFound(boxId))

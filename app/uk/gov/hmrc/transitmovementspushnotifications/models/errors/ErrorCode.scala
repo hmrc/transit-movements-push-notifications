@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
 import play.api.http.Status.BAD_REQUEST
 import play.api.http.Status.FORBIDDEN
@@ -22,6 +22,7 @@ import play.api.http.Status.GATEWAY_TIMEOUT
 import play.api.http.Status.INTERNAL_SERVER_ERROR
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.UNSUPPORTED_MEDIA_TYPE
+import play.api.http.Status.NOT_ACCEPTABLE
 import play.api.libs.json.JsError
 import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
@@ -37,13 +38,16 @@ object ErrorCode {
   case object InternalServerError  extends ErrorCode("INTERNAL_SERVER_ERROR", INTERNAL_SERVER_ERROR)
   case object GatewayTimeout       extends ErrorCode("GATEWAY_TIMEOUT", GATEWAY_TIMEOUT)
   case object UnsupportedMediaType extends ErrorCode("UNSUPPORTED_MEDIA_TYPE", UNSUPPORTED_MEDIA_TYPE)
+  case object NotAcceptable        extends ErrorCode("NOT_ACCEPTABLE", NOT_ACCEPTABLE)
 
   lazy val errorCodes: Seq[ErrorCode] = Seq(
     BadRequest,
     NotFound,
     Forbidden,
     InternalServerError,
-    GatewayTimeout
+    GatewayTimeout,
+    UnsupportedMediaType,
+    NotAcceptable
   )
 
   implicit val errorCodeWrites: Writes[ErrorCode] = Writes {

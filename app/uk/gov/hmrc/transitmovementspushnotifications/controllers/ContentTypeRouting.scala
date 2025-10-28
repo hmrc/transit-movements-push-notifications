@@ -25,8 +25,8 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.BaseController
 import play.api.mvc.Request
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.PresentationError
 import uk.gov.hmrc.transitmovementspushnotifications.controllers.stream.StreamingParsers
+import uk.gov.hmrc.transitmovementspushnotifications.models.errors.PresentationError
 
 import scala.concurrent.Future
 

@@ -14,9 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.config
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
-object Constants {
-  val BoxNameV2_1 = "customs/transits##2.1##notificationUrl"
-  val BoxNameV3_0 = "customs/transits##3.0##notificationUrl"
+import play.api.libs.json.JsString
+import play.api.libs.json.JsSuccess
+import uk.gov.hmrc.transitmovementspushnotifications.base.SpecBase
+
+class ErrorCodeSpec extends SpecBase {
+
+  "writes" in
+    ErrorCode.errorCodes.foreach {
+      errorCode =>
+        val json = JsString(errorCode.code)
+
+        json.validate[ErrorCode] match {
+          case JsSuccess(code, _) => code mustBe errorCode
+          case _                  => fail("failed to match error code")
+        }
+    }
 }

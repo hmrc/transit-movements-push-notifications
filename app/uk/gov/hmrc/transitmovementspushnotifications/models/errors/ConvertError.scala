@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
 import cats.data.EitherT
-import uk.gov.hmrc.transitmovementspushnotifications.controllers.errors.HeaderExtractError.NoHeaderFound
+import HeaderExtractError.NoHeaderFound
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.MongoError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError
 import uk.gov.hmrc.transitmovementspushnotifications.services.errors.PushPullNotificationError._

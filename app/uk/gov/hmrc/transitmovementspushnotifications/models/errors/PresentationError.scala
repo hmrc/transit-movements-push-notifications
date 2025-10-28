@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
 import play.api.Logging
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
@@ -40,6 +40,9 @@ object PresentationError extends CommonFormats with Logging {
 
   def notFoundError(message: String): PresentationError =
     StandardError(message, ErrorCode.NotFound)
+
+  def notAcceptableError(message: String): PresentationError =
+    StandardError(message, ErrorCode.NotAcceptable)
 
   def unsupportedMediaTypeError(message: String): PresentationError =
     StandardError(message, ErrorCode.UnsupportedMediaType)

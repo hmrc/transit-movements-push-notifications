@@ -16,22 +16,23 @@
 
 package uk.gov.hmrc.transitmovementspushnotifications.connectors
 
-import com.google.inject._
+import com.google.inject.*
 import io.lemonlabs.uri.QueryString
-import play.api.http.Status._
-import play.api.http._
+import play.api.http.Status.*
+import play.api.http.*
 import play.api.libs.json.Json
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.transitmovementspushnotifications.config.AppConfig
 import uk.gov.hmrc.transitmovementspushnotifications.config.Constants
-import uk.gov.hmrc.transitmovementspushnotifications.models._
+import uk.gov.hmrc.transitmovementspushnotifications.models.*
 import uk.gov.hmrc.transitmovementspushnotifications.models.responses.BoxResponse
 import play.api.libs.ws.WSBodyWritables.writeableOf_JsValue
+import uk.gov.hmrc.transitmovementspushnotifications.models.APIVersionHeader.V3_0
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -40,7 +41,7 @@ import scala.util.control.NonFatal
 @ImplementedBy(classOf[PushPullNotificationConnectorImpl])
 trait PushPullNotificationConnector {
 
-  def getBox(clientId: String)(implicit
+  def getBox(clientId: String, apiVersion: APIVersionHeader)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[BoxResponse]
@@ -59,12 +60,15 @@ trait PushPullNotificationConnector {
 
 class PushPullNotificationConnectorImpl @Inject() (appConfig: AppConfig, httpClientV2: HttpClientV2) extends PushPullNotificationConnector with BaseConnector {
 
-  override def getBox(clientId: String)(implicit
+  override def getBox(clientId: String, apiVersion: APIVersionHeader)(implicit
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[BoxResponse] = {
 
-    val query = QueryString.fromPairs(("boxName", Constants.BoxName), ("clientId", clientId))
+    val query = apiVersion match {
+      case V3_0 => QueryString.fromPairs(("boxName", Constants.BoxNameV3_0), ("clientId", clientId))
+      case _    => QueryString.fromPairs(("boxName", Constants.BoxNameV2_1), ("clientId", clientId))
+    }
 
     val url = appConfig.pushPullUrl.withPath(getBoxRoute).withQueryString(query)
 

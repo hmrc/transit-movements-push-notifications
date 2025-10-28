@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models.errors
 
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
@@ -39,6 +39,8 @@ class PresentationErrorSpec extends AnyFreeSpec with Matchers with MockitoSugar 
     "for UnsupportedMediaType" in testStandard(PresentationError.unsupportedMediaTypeError, "unsupported media type", "UNSUPPORTED_MEDIA_TYPE")
 
     "for NotFound" in testStandard(PresentationError.notFoundError, "not found", "NOT_FOUND")
+
+    "for NotAcceptable" in testStandard(PresentationError.notAcceptableError, "not acceptable", "NOT_ACCEPTABLE")
 
     "for InternalServerError" in {
       val error = PresentationError.internalServerError("internal error")

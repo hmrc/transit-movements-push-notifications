@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.transitmovementspushnotifications.controllers.errors
+package uk.gov.hmrc.transitmovementspushnotifications.models
 
-sealed abstract class HeaderExtractError
+enum APIVersionHeader(val value: String) {
+  case V2_1 extends APIVersionHeader("2.1")
+  case V3_0 extends APIVersionHeader("3.0")
+}
 
-object HeaderExtractError {
-  case class NoHeaderFound(element: String) extends HeaderExtractError
+object APIVersionHeader {
+  def fromString(value: String): Option[APIVersionHeader] =
+    values.find(_.value == value)
 }
